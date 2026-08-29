@@ -1,0 +1,7 @@
+Perform a final, purpose-scoped release audit for CALA SIGNAL in this repository. This is a public customer-facing investor sourcing product, so keep the work and transcript professional and free of credentials, private conversations, event strategy, or unrelated history.
+
+Inspect the current code and existing docs/ENTIRE-LABS.md. Update only docs/ENTIRE-LABS.md with a concise section titled "Final launch audit (2026-08-29)" that records verifiable, customer-trust-focused engineering evidence from the current repository: source-backed hard-criterion qualification, direct-context receipt boundaries, signed IP-bound shortlist tokens, atomic D1 quota enforcement, and the local quality gates. Do not claim a tool or workflow succeeded unless you personally verify it. Do not include tokens, secrets, user prompts, raw session text, internal IDs, or private repository history. Do not edit docs/DEMO.md or any other file.
+
+Run npm test, npm run lint, npm run typecheck, npm audit --audit-level=low, and git diff --check. If all pass, commit the single documentation change with exactly this message: docs: record final launch audit
+
+Do not push, deploy, browse, call providers, change dependencies, or modify application code. Return the commit SHA and the exact validation results.
