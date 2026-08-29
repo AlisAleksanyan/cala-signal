@@ -24,7 +24,7 @@
 - tolerant normalization of dynamic Cala row schemas
 - entity matching and deterministic multi-factor ranking
 - rate limit, input/body constraints, timeouts, safe URL parsing, generic failures, no-store responses, and browser security headers
-- full build/render/API-negative-path tests
+- 13 passing build/render/API-negative-path tests, including timeout, pre-abort, mid-flight abort, and listener-cleanup coverage for OpenAI and Cala, plus Cala sibling cancellation
 
 ## Cala depth
 
