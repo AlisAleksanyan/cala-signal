@@ -1,4 +1,5 @@
-import type { CalaQueryResponse, CalaSearchResponse } from "./types";
+import type { CalaQueryResponse, CalaSearchResponse } from "./types.ts";
+import { createLinkedAbortController } from "./abort.ts";
 
 const CALA_BASE_URL = "https://api.cala.ai/v1";
 // Cala's knowledge endpoints do graph expansion and provenance assembly. Live
@@ -52,29 +53,23 @@ function validateSearchResponse(payload: CalaSearchResponse): CalaSearchResponse
   };
 }
 
-export async function queryCala(input: string, requestSignal?: AbortSignal): Promise<{
+export async function queryCala(input: string, requestSignal?: AbortSignal, timeoutMs = CALA_TIMEOUT_MS): Promise<{
   structured: CalaQueryResponse;
   sourced: CalaSearchResponse;
 }> {
   const evidencePrompt = `${input} Give a concise evidence-backed answer. Include sources and explainability. State missing or conflicting evidence explicitly.`;
-  const controller = new AbortController();
-  const timeoutSignal = AbortSignal.timeout(CALA_TIMEOUT_MS);
-  const abortBoth = () => controller.abort();
-  timeoutSignal.addEventListener("abort", abortBoth, { once: true });
-  requestSignal?.addEventListener("abort", abortBoth, { once: true });
-  if (requestSignal?.aborted) controller.abort();
+  const operation = createLinkedAbortController(requestSignal, timeoutMs);
 
   let structured: CalaQueryResponse;
   let sourced: CalaSearchResponse;
   try {
     [structured, sourced] = await Promise.all([
-      calaPost<CalaQueryResponse>("/knowledge/query", input, controller.signal),
-      calaPost<CalaSearchResponse>("/knowledge/search", evidencePrompt, controller.signal),
+      calaPost<CalaQueryResponse>("/knowledge/query", input, operation.signal),
+      calaPost<CalaSearchResponse>("/knowledge/search", evidencePrompt, operation.signal),
     ]);
   } finally {
-    controller.abort();
-    timeoutSignal.removeEventListener("abort", abortBoth);
-    requestSignal?.removeEventListener("abort", abortBoth);
+    operation.abort();
+    operation.cleanup();
   }
 
   return {

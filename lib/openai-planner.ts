@@ -1,5 +1,6 @@
 import { GEOGRAPHIES, SECTORS, SIGNALS, type ThesisPlan } from "./types";
 import { validateThesisPlan } from "./validation";
+import { createLinkedAbortController } from "./abort";
 
 const OPENAI_URL = "https://api.openai.com/v1/responses";
 
@@ -50,50 +51,55 @@ function extractOutputText(payload: unknown): string | null {
   return null;
 }
 
-export async function planThesis(brief: string): Promise<ThesisPlan> {
+export async function planThesis(brief: string, requestSignal?: AbortSignal): Promise<ThesisPlan> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OpenAI is not configured.");
 
-  const response = await fetch(OPENAI_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || "gpt-5.6-terra",
-      store: false,
-      reasoning: { effort: "low" },
-      instructions: [
-        "You convert an investor's sourcing brief into a conservative database search plan.",
-        "Use the closest supported sector and geography. Never add criteria the user did not imply.",
-        "Use 2019 as the default founding year, EUR 25m as the default funding ceiling, and 5 results unless the user specifies otherwise.",
-        "The rationale must be one crisp sentence explaining the investable wedge, not marketing copy.",
-      ].join(" "),
-      input: brief,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "startup_scout_thesis",
-          strict: true,
-          schema: thesisSchema,
-        },
-      },
-    }),
-    signal: AbortSignal.timeout(18_000),
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI planning failed (${response.status}).`);
-  }
-
-  const payload: unknown = await response.json();
-  const text = extractOutputText(payload);
-  if (!text) throw new Error("OpenAI returned no structured thesis.");
-
+  const operation = createLinkedAbortController(requestSignal, 18_000);
   try {
-    return validateThesisPlan(JSON.parse(text));
-  } catch {
-    throw new Error("OpenAI returned a thesis that failed server validation.");
+    const response = await fetch(OPENAI_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || "gpt-5.6-terra",
+        store: false,
+        reasoning: { effort: "low" },
+        instructions: [
+          "You convert an investor's sourcing brief into a conservative database search plan.",
+          "Use the closest supported sector and geography. Never add criteria the user did not imply.",
+          "Use 2019 as the default founding year, EUR 25m as the default funding ceiling, and 5 results unless the user specifies otherwise.",
+          "The rationale must be one crisp sentence explaining the investable wedge, not marketing copy.",
+        ].join(" "),
+        input: brief,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "startup_scout_thesis",
+            strict: true,
+            schema: thesisSchema,
+          },
+        },
+      }),
+      signal: operation.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI planning failed (${response.status}).`);
+    }
+
+    const payload: unknown = await response.json();
+    const text = extractOutputText(payload);
+    if (!text) throw new Error("OpenAI returned no structured thesis.");
+
+    try {
+      return validateThesisPlan(JSON.parse(text));
+    } catch {
+      throw new Error("OpenAI returned a thesis that failed server validation.");
+    }
+  } finally {
+    operation.cleanup();
   }
 }

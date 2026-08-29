@@ -105,7 +105,8 @@ export async function POST(request: Request): Promise<Response> {
       throw new Error("Live providers are not configured.");
     }
     const planningStarted = Date.now();
-    const thesis = await planThesis(brief);
+    const thesis = await planThesis(brief, request.signal);
+    if (request.signal.aborted) throw request.signal.reason;
     const planningMs = Date.now() - planningStarted;
     const calaQuery = compileCalaQuery(thesis);
 

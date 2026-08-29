@@ -187,7 +187,7 @@ export function SignalApp() {
     ? "Submitting · validating the brief"
     : elapsedSeconds < 60
       ? "Working · OpenAI and Cala are building the evidence set"
-      : "Still working · graph expansion can take up to 90 seconds";
+      : "Still working · Cala is assembling the evidence graph";
 
   async function submit(event: FormEvent) {
     event.preventDefault();
