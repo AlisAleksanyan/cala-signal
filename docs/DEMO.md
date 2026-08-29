@@ -16,13 +16,15 @@ Use the prepared brief:
 
 Click **Run live scout**.
 
+For the judged demo, run this exact brief once 5–10 minutes beforehand and keep the completed result open in a second tab. A fresh Cala graph run currently takes roughly 60–90 seconds; never imply that a saved result is a fresh request.
+
 While it runs:
 
 > “OpenAI does not answer the investment question. It converts my brief into a strict, allowlisted schema. Our server validates it again and compiles the Cala request.”
 
 ## 0:38–1:03 — Cala is the knowledge engine
 
-Open **Inspect the safe Cala query**.
+Switch to the verified completed-result tab, state that it came from the pre-demo live run, and open **Inspect the safe Cala query**.
 
 > “The raw prompt never becomes a Cala command. Cala then runs two jobs in parallel: structured company rows for computation, and sourced search for KnowBits and explainability.”
 

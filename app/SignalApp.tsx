@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { RankedCompany, ScoutResponse } from "@/lib/types";
 
 const EXAMPLES = [
@@ -173,10 +173,25 @@ export function SignalApp() {
   const [result, setResult] = useState<ScoutResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const characterCount = useMemo(() => brief.trim().length, [brief]);
+
+  useEffect(() => {
+    if (!loading) return;
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1_000)), 1_000);
+    return () => window.clearInterval(timer);
+  }, [loading]);
+
+  const liveStage = elapsedSeconds < 5
+    ? "Constrain · validating the thesis"
+    : elapsedSeconds < 60
+      ? "Verify · Cala is expanding the knowledge graph"
+      : "Trace · Cala is assembling sources and explainability";
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    setElapsedSeconds(0);
     setLoading(true);
     setError(null);
     try {
@@ -249,6 +264,13 @@ export function SignalApp() {
               {loading ? <><span className="spinner" />Tracing signals…</> : <>Run live scout <span>↗</span></>}
             </button>
           </div>
+          {loading && (
+            <div className="loading-status" role="status" aria-live="polite">
+              <span>{liveStage}</span>
+              <strong>{elapsedSeconds}s</strong>
+              <small>Live evidence runs usually take 60–90 seconds.</small>
+            </div>
+          )}
           {error && <div className="error-message" role="alert"><strong>Pipeline stopped.</strong> {error}</div>}
         </form>
 

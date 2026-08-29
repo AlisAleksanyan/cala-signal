@@ -82,6 +82,9 @@ main { min-height: 100vh; overflow: hidden; }
 .run-button:hover:not(:disabled) { background: var(--ink); color: var(--acid); }
 .run-button:disabled { cursor: not-allowed; opacity: .6; }
 .spinner { width: 15px; height: 15px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+.loading-status { display: grid; grid-template-columns: 1fr auto; gap: 5px 18px; padding: 14px 20px; border-top: 1px solid var(--line); background: #f4f6f2; font: 700 11px/1.3 var(--font-geist-mono), monospace; letter-spacing: .04em; text-transform: uppercase; }
+.loading-status strong { color: #275c3d; }
+.loading-status small { grid-column: 1 / -1; color: var(--muted); font-weight: 500; letter-spacing: 0; text-transform: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .error-message { border-top: 1px solid #8d2b19; padding: 14px 18px; color: #792513; background: #ffe5dc; font-size: 13px; }
 

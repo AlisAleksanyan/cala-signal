@@ -16,6 +16,8 @@ Startup discovery tools often produce one of two bad outputs: a confident chat a
 4. **Rank** — deterministic TypeScript scores each company out of 100.
 5. **Inspect** — the UI exposes every scoring component, Cala entity/KnowBit references, source links, and missing fields.
 
+Both Cala jobs perform graph expansion and provenance assembly. A live run currently takes about 60–90 seconds, so the UI exposes the active stage and elapsed time instead of pretending the result is instantaneous.
+
 ```text
 Investor brief
     ↓

@@ -1,6 +1,10 @@
 import type { CalaQueryResponse, CalaSearchResponse } from "./types";
 
 const CALA_BASE_URL = "https://api.cala.ai/v1";
+// Cala's knowledge endpoints do graph expansion and provenance assembly. Live
+// responses currently take about a minute, so a short web-style timeout would
+// abort valid work before Cala can return its evidence bundle.
+const CALA_TIMEOUT_MS = 90_000;
 
 async function calaPost<T>(path: string, input: string): Promise<T> {
   const apiKey = process.env.CALA_API_KEY;
@@ -13,7 +17,7 @@ async function calaPost<T>(path: string, input: string): Promise<T> {
       "X-API-KEY": apiKey,
     },
     body: JSON.stringify({ input }),
-    signal: AbortSignal.timeout(22_000),
+    signal: AbortSignal.timeout(CALA_TIMEOUT_MS),
   });
 
   if (!response.ok) {
