@@ -4,9 +4,9 @@ const CALA_BASE_URL = "https://api.cala.ai/v1";
 // Cala's knowledge endpoints do graph expansion and provenance assembly. Live
 // responses currently take about a minute, so a short web-style timeout would
 // abort valid work before Cala can return its evidence bundle.
-const CALA_TIMEOUT_MS = 90_000;
+const CALA_TIMEOUT_MS = 110_000;
 
-async function calaPost<T>(path: string, input: string): Promise<T> {
+async function calaPost<T>(path: string, input: string, signal: AbortSignal): Promise<T> {
   const apiKey = process.env.CALA_API_KEY;
   if (!apiKey) throw new Error("Cala is not configured.");
 
@@ -17,7 +17,7 @@ async function calaPost<T>(path: string, input: string): Promise<T> {
       "X-API-KEY": apiKey,
     },
     body: JSON.stringify({ input }),
-    signal: AbortSignal.timeout(CALA_TIMEOUT_MS),
+    signal,
   });
 
   if (!response.ok) {
@@ -52,15 +52,30 @@ function validateSearchResponse(payload: CalaSearchResponse): CalaSearchResponse
   };
 }
 
-export async function queryCala(input: string): Promise<{
+export async function queryCala(input: string, requestSignal?: AbortSignal): Promise<{
   structured: CalaQueryResponse;
   sourced: CalaSearchResponse;
 }> {
   const evidencePrompt = `${input} Give a concise evidence-backed answer. Include sources and explainability. State missing or conflicting evidence explicitly.`;
-  const [structured, sourced] = await Promise.all([
-    calaPost<CalaQueryResponse>("/knowledge/query", input),
-    calaPost<CalaSearchResponse>("/knowledge/search", evidencePrompt),
-  ]);
+  const controller = new AbortController();
+  const timeoutSignal = AbortSignal.timeout(CALA_TIMEOUT_MS);
+  const abortBoth = () => controller.abort();
+  timeoutSignal.addEventListener("abort", abortBoth, { once: true });
+  requestSignal?.addEventListener("abort", abortBoth, { once: true });
+  if (requestSignal?.aborted) controller.abort();
+
+  let structured: CalaQueryResponse;
+  let sourced: CalaSearchResponse;
+  try {
+    [structured, sourced] = await Promise.all([
+      calaPost<CalaQueryResponse>("/knowledge/query", input, controller.signal),
+      calaPost<CalaSearchResponse>("/knowledge/search", evidencePrompt, controller.signal),
+    ]);
+  } finally {
+    controller.abort();
+    timeoutSignal.removeEventListener("abort", abortBoth);
+    requestSignal?.removeEventListener("abort", abortBoth);
+  }
 
   return {
     structured: validateQueryResponse(structured),

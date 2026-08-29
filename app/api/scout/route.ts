@@ -110,7 +110,7 @@ export async function POST(request: Request): Promise<Response> {
     const calaQuery = compileCalaQuery(thesis);
 
     const calaStarted = Date.now();
-    const cala = await queryCala(calaQuery);
+    const cala = await queryCala(calaQuery, request.signal);
     const calaMs = Date.now() - calaStarted;
     const companies = rankCompanies(cala.structured.results, cala.structured.entities, thesis);
 

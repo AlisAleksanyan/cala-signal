@@ -184,10 +184,10 @@ export function SignalApp() {
   }, [loading]);
 
   const liveStage = elapsedSeconds < 5
-    ? "Constrain · validating the thesis"
+    ? "Submitting · validating the brief"
     : elapsedSeconds < 60
-      ? "Verify · Cala is expanding the knowledge graph"
-      : "Trace · Cala is assembling sources and explainability";
+      ? "Working · OpenAI and Cala are building the evidence set"
+      : "Still working · graph expansion can take up to 90 seconds";
 
   async function submit(event: FormEvent) {
     event.preventDefault();
