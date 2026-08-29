@@ -1,4 +1,5 @@
 import { queryCala } from "@/lib/cala";
+import { linkEvidenceToCompanies } from "@/lib/evidence";
 import { planThesis } from "@/lib/openai-planner";
 import { rankCompanies } from "@/lib/ranking";
 import type { ScoutResponse } from "@/lib/types";
@@ -72,7 +73,6 @@ function publicMessage(error: unknown): { status: number; message: string } {
 
 export async function POST(request: Request): Promise<Response> {
   const requestId = crypto.randomUUID();
-  const startedAt = Date.now();
   const rate = takeRateLimit(clientKey(request));
   const rateHeaders = {
     "X-RateLimit-Limit": String(RATE_LIMIT),
@@ -81,65 +81,60 @@ export async function POST(request: Request): Promise<Response> {
   };
 
   if (!rate.allowed) {
-    return json({ error: "Too many requests. Try again in one minute.", request_id: requestId }, 429, rateHeaders);
+    return json({ error: "Too many requests. Try again in one minute." }, 429, rateHeaders);
   }
   if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) {
-    return json({ error: "Content-Type must be application/json.", request_id: requestId }, 415, rateHeaders);
+    return json({ error: "Content-Type must be application/json." }, 415, rateHeaders);
   }
 
   try {
     const bodyText = await request.text();
     if (new TextEncoder().encode(bodyText).byteLength > MAX_BODY_BYTES) {
-      return json({ error: "Request body is too large.", request_id: requestId }, 413, rateHeaders);
+      return json({ error: "Request body is too large." }, 413, rateHeaders);
     }
 
     let raw: unknown;
     try {
       raw = JSON.parse(bodyText);
     } catch {
-      return json({ error: "Request body is not valid JSON.", request_id: requestId }, 400, rateHeaders);
+      return json({ error: "Request body is not valid JSON." }, 400, rateHeaders);
     }
 
     const brief = validateBrief((raw as { brief?: unknown })?.brief);
     if (!process.env.OPENAI_API_KEY || !process.env.CALA_API_KEY) {
       throw new Error("Live providers are not configured.");
     }
-    const planningStarted = Date.now();
     const plannedThesis = await planThesis(brief, request.signal);
     const explicitFoundingYear = extractExplicitFoundingYear(brief);
     const thesis = explicitFoundingYear === null
       ? plannedThesis
       : { ...plannedThesis, founded_after: explicitFoundingYear };
     if (request.signal.aborted) throw request.signal.reason;
-    const planningMs = Date.now() - planningStarted;
     const calaQuery = compileCalaQuery(thesis);
 
-    const calaStarted = Date.now();
     const cala = await queryCala(calaQuery, request.signal);
-    const calaMs = Date.now() - calaStarted;
-    const companies = rankCompanies(cala.structured.results, cala.structured.entities, thesis);
+    const rankedCompanies = rankCompanies(cala.structured.results, cala.structured.entities, thesis);
+    const companies = linkEvidenceToCompanies(
+      rankedCompanies,
+      cala.sourced.context,
+      cala.sourced.explainability,
+      cala.sourced.entities ?? [],
+    );
 
     const caveats: string[] = [];
-    if (!companies.length) caveats.push("Cala returned no structured rows for this thesis. Broaden the geography or funding ceiling.");
-    if (companies.some((company) => company.missing_fields.length > 0)) {
-      caveats.push("Missing fields are scored as zero; CALA SIGNAL never invents unavailable evidence.");
+    if (!companies.length) caveats.push("Cala did not resolve any structured candidates for this thesis. Broaden the geography or funding ceiling.");
+    if (companies.some((company) => company.qualification === "needs_verification")) {
+      caveats.push("Candidates with unknown or unproven hard criteria remain in the verification queue.");
     }
-    if (!cala.sourced.context.length) caveats.push("No Cala KnowBits were returned for this query.");
+    if (companies.some((company) => company.evidence_claims.length > 0)
+      && !companies.some((company) => company.evidence_claims.some((claim) => claim.source_url))) {
+      caveats.push("Cala returned evidence claims without source origins for this result; verify those claims independently.");
+    }
 
     const result: ScoutResponse = {
-      request_id: requestId,
       thesis,
-      cala_query: calaQuery,
       companies,
-      evidence: cala.sourced.context,
-      explanations: cala.sourced.explainability,
-      narrative: cala.sourced.content.slice(0, 3_500),
       caveats,
-      timings_ms: {
-        planning: planningMs,
-        cala: calaMs,
-        total: Date.now() - startedAt,
-      },
     };
 
     return json(result, 200, rateHeaders);
@@ -151,6 +146,6 @@ export async function POST(request: Request): Promise<Response> {
         error: error instanceof Error ? error.message : "unknown",
       });
     }
-    return json({ error: safe.message, request_id: requestId }, safe.status, rateHeaders);
+    return json({ error: safe.message }, safe.status, rateHeaders);
   }
 }

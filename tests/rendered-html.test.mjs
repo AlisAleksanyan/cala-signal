@@ -37,14 +37,19 @@ test("server-renders the CALA SIGNAL product", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>CALA SIGNAL/);
-  assert.match(html, /Find the companies/);
-  assert.match(html, /Run live scout/);
-  assert.match(html, /OpenAI/);
+  assert.match(html, /One thesis/);
+  assert.match(html, /A shortlist you can/);
+  assert.match(html, /Build my shortlist/);
+  assert.match(html, /Qualified leads/);
+  assert.match(html, /Verification queue/);
+  assert.match(html, /Evidence receipts/);
   assert.match(html, /Cala/);
-  assert.match(html, /Every AI edit should ship with a receipt/);
-  assert.match(html, /Entire Labs/);
+  assert.match(html, /Powered by Cala/);
   assert.match(html, /property="og:image"/);
   assert.match(html, /\/og\.png/);
+  for (const forbidden of ["Entire", "GitHub", "Aikido", "checkpoint", "session", "commit", "token", "build passport", "build-passport"]) {
+    assert.doesNotMatch(html, new RegExp(forbidden, "i"), `public HTML contains forbidden product-internal wording: ${forbidden}`);
+  }
   assert.doesNotMatch(html, /OPENAI_API_KEY|CALA_API_KEY|sk-[A-Za-z0-9]/);
 });
 
@@ -58,6 +63,7 @@ test("ships browser security headers", async () => {
 test("rejects malformed scout requests before provider calls", async () => {
   const wrongType = await callApi(new Request("http://localhost/api/scout", { method: "POST", body: "hello" }));
   assert.equal(wrongType.status, 415);
+  assert.equal("request_id" in await wrongType.json(), false);
 
   const tooShort = await callApi(new Request("http://localhost/api/scout", {
     method: "POST",

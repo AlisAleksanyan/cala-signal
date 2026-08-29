@@ -34,21 +34,21 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase: origin,
-    title: "CALA SIGNAL",
-    description: "Evidence-first startup scouting with an Entire Build Passport.",
+    title: "CALA SIGNAL — Source-backed startup shortlists",
+    description: "Turn one investment thesis into qualified leads, a verification queue, and source-linked evidence in about a minute.",
     icons: {
       icon: "/favicon.svg",
       shortcut: "/favicon.svg",
     },
     openGraph: {
-      title: "CALA SIGNAL — Every AI edit ships with a receipt",
-      description: "Cala-backed startup scouting with inspectable ranking and Entire build provenance.",
-      images: [{ url: socialImage, width: 1672, height: 941, alt: "CALA SIGNAL Entire Build Passport" }],
+      title: "CALA SIGNAL — One thesis. A shortlist you can defend.",
+      description: "Source-backed company sourcing for investors, accelerators, and venture teams.",
+      images: [{ url: socialImage, width: 1731, height: 909, alt: "CALA SIGNAL source-backed investor shortlist workspace" }],
     },
     twitter: {
       card: "summary_large_image",
-      title: "CALA SIGNAL — Every AI edit ships with a receipt",
-      description: "Cala-backed startup scouting with inspectable ranking and Entire build provenance.",
+      title: "CALA SIGNAL — One thesis. A shortlist you can defend.",
+      description: "Qualified leads, a verification queue, and source-linked evidence in about a minute.",
       images: [socialImage],
     },
   };

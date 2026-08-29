@@ -49,6 +49,12 @@ export interface CalaEntity {
 export interface CalaContext {
   id: string;
   content: string;
+  origins: CalaOrigin[];
+}
+
+export interface CalaOrigin {
+  url: string;
+  label: string | null;
 }
 
 export interface CalaExplanation {
@@ -69,11 +75,19 @@ export interface CalaSearchResponse {
 }
 
 export interface ScoreBreakdown {
-  thesis_fit: number;
-  funding_gap: number;
+  thesis_evidence: number;
+  capital_evidence: number;
   evidence_freshness: number;
-  momentum: number;
+  signal_evidence: number;
   completeness: number;
+}
+
+export type CandidateQualification = "verified_match" | "needs_verification" | "outside_thesis";
+
+export interface EvidenceClaim {
+  claim: string;
+  source_url: string | null;
+  source_label: string | null;
 }
 
 export interface RankedCompany {
@@ -87,24 +101,18 @@ export interface RankedCompany {
   latest_event_date: string | null;
   momentum_signal: string | null;
   source_url: string | null;
-  entity_id: string | null;
   score: number;
   score_breakdown: ScoreBreakdown;
   missing_fields: string[];
+  qualification: CandidateQualification;
+  missing_criteria: string[];
+  failed_criteria: string[];
+  evidence_claims: EvidenceClaim[];
+  conflicting_facts: EvidenceClaim[];
 }
 
 export interface ScoutResponse {
-  request_id: string;
   thesis: ThesisPlan;
-  cala_query: string;
   companies: RankedCompany[];
-  evidence: CalaContext[];
-  explanations: CalaExplanation[];
-  narrative: string;
   caveats: string[];
-  timings_ms: {
-    planning: number;
-    cala: number;
-    total: number;
-  };
 }

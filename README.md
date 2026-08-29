@@ -1,60 +1,83 @@
 # CALA SIGNAL
 
-**Evidence-first startup scouting for investors.** Describe an opportunity in plain English; CALA SIGNAL turns it into a constrained search plan, retrieves structured and sourced evidence from Cala, and ranks candidates with inspectable math.
+**Source-backed startup sourcing for early-stage investors, accelerators, and corporate venture teams.** Describe one investment thesis in plain English; CALA SIGNAL returns qualified leads, a verification queue, and known exclusions with the evidence needed to review each decision.
 
-Built for the **Tech Europe × Cala — The Summer Lock-In** hackathon in Barcelona.
+## Customer problem
 
-## The problem
+Startup discovery often ends as either a confident AI list with weak proof or a database export that still needs manual triage. A sourcing team needs to know which companies demonstrably match the mandate, which might match but have unresolved hard facts, and which are ruled out by known facts.
 
-Startup discovery tools often produce one of two bad outputs: a confident chat answer with hidden reasoning, or a database dump that still needs hours of manual triage. Investors need a shortlist they can challenge: what matched, which evidence is recent, what is missing, and why one company ranked above another.
+CALA SIGNAL makes that distinction explicit. Unknown founding year or funding never passes as qualified, and a company with a known out-of-range year or funding total is never presented as a match.
 
-## The live workflow
+## Product workflow
 
-1. **Constrain** — OpenAI Structured Outputs converts the investor brief into an allowlisted `ThesisPlan`.
-2. **Compile** — the server validates that plan again and creates a bounded natural-language Cala query. Raw user input never becomes a Cala command.
-3. **Verify** — Cala's structured query and sourced-search endpoints run in parallel.
-4. **Rank** — deterministic TypeScript scores each company out of 100.
-5. **Inspect** — the UI exposes every scoring component, Cala entity/KnowBit references, source links, and missing fields.
-
-Both Cala jobs perform graph expansion and provenance assembly. A live run currently takes about 60–90 seconds, so the UI exposes the active stage and elapsed time instead of pretending the result is instantaneous.
+1. **Describe the thesis** — one natural-language brief sets sector, geography, founding-year threshold, funding ceiling, and useful momentum signals.
+2. **Cala resolves companies and evidence** — structured company rows and sourced search run in parallel.
+3. **Review the decision workspace** — candidates are separated into Verified matches, Needs verification, and Excluded by known facts.
+4. **Share the shortlist** — a client-side action copies a concise plain-text memo containing only the visible decision facts and source links.
 
 ```text
-Investor brief
-    ↓
-OpenAI strict JSON schema
-    ↓ server validation + bounded compiler
+Investment thesis
+      ↓
+Validated sourcing plan
+      ↓
 Cala structured rows ─── Cala sourced evidence
-    ↓                         ↓
-Deterministic score ───── Evidence ledger
-    ↓
-Ranked, auditable shortlist
+      ↓                         ↓
+Hard-criteria check ───── Linked evidence claims
+      ↓
+Verified matches · Verification queue · Known exclusions
 ```
 
-## Scoring model
+## Qualification model
+
+Qualification is deterministic and separate from scoring.
+
+| State | Rule |
+| --- | --- |
+| `verified_match` | Founding year and disclosed funding are known and compliant, and geography and sector fit are demonstrable. |
+| `needs_verification` | A hard criterion is unknown or geography/sector fit is not demonstrably matched. |
+| `outside_thesis` | A known founding year is before the threshold or known disclosed funding exceeds the ceiling. |
+
+Uncertain companies remain available for verification rather than being silently discarded.
+
+## Evidence readiness
+
+The 100-point **Evidence readiness** score helps teams prioritize review; it does not determine qualification and is not an investment recommendation.
 
 | Component | Points | Rule |
 | --- | ---: | --- |
-| Thesis fit | 30 | Cala location and sector match the structured thesis |
-| Funding gap | 20 | Company is below the disclosed-funding ceiling; less capital receives more gap points |
+| Thesis evidence | 30 | Demonstrated geography and sector coverage |
+| Capital evidence | 20 | A disclosed funding value is available |
 | Evidence freshness | 20 | 20 points within 12 months, 12 within 24 months, 5 within 48 months |
-| Momentum | 15 | Cala returns a concrete recent signal |
-| Completeness | 15 | Seven decision fields are present, including a Cala entity or source |
+| Latest signal | 15 | Cala returns a concrete recent signal |
+| Completeness | 15 | Seven decision fields are present, including a structured source or resolved entity |
 
-Missing evidence receives **zero points**. The model never fills a missing Cala fact. This is an opportunity-prioritization score, not financial advice.
+The full deterministic breakdown stays behind a disclosure on each company card.
+
+## Cala integration
+
+- `POST /v1/knowledge/query` returns dynamic structured rows for company facts.
+- `POST /v1/knowledge/search` returns supporting context, explainability, and matching entities.
+- Both requests run in parallel under one linked abort controller and one 110-second provider timeout.
+- Dynamic rows are normalized through bounded aliases rather than trusted as a fixed schema.
+- Search context retains bounded source origins when Cala returns them. Only HTTP(S) URLs reach the client.
+- Explainability references are reconciled with context references and company mentions so relevant claims can link to their supporting origins.
+- Provider Markdown or HTML is never rendered; evidence is displayed as escaped plain text.
+
+[Cala query reference](https://docs.cala.ai/api-reference/query) · [Cala search reference](https://docs.cala.ai/api-reference/search)
 
 ## Security design
 
-- Provider keys remain server-side and `.env*` is gitignored.
+- Provider keys remain server-side and `.env*` is ignored.
 - Requests require JSON, are capped at 4 KB, and briefs are normalized and limited to 24–600 characters.
-- The OpenAI response must satisfy a strict JSON schema and then pass independent server validation.
-- Sector, geography, momentum signals, result count, year, and funding limits are all allowlisted or range checked.
-- The browser receives a same-origin-only Content Security Policy, clickjacking protection, a restrictive Permissions Policy, and `nosniff`.
-- API responses are `no-store`; errors are generic and never return upstream payloads or credentials.
-- A lightweight rate limit protects sponsor credits during the public demo.
-- External evidence links are parsed server-side and accept only HTTP(S).
-- The committed lockfile is scanned; `npm audit --audit-level=low` currently reports zero findings.
+- The planning response must satisfy a strict JSON schema and independent server validation.
+- Sector, geography, signals, result count, year, and funding limits are allowlisted or range checked.
+- Provider calls preserve client cancellation, timeout cancellation, sibling cancellation, and listener cleanup.
+- API responses are `no-store`; upstream payloads, compiled provider input, provider narratives, internal identifiers, and timing data are not returned to the customer workspace.
+- Browser responses keep the same-origin Content Security Policy, frame protection, restrictive Permissions Policy, HSTS, and `nosniff`.
+- The in-memory rate bucket limits a client to eight requests per minute per Worker isolate.
+- External links accept only HTTP(S), with bounded URLs, labels, claims, references, and arrays.
 
-See [SECURITY.md](./SECURITY.md) for the threat model and verification checklist.
+See [SECURITY.md](./SECURITY.md) for the complete trust model.
 
 ## Local setup
 
@@ -66,7 +89,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Fill the server-only variables in `.env.local`:
+Set the server-only variables in `.env.local`:
 
 ```dotenv
 OPENAI_API_KEY=
@@ -74,17 +97,19 @@ CALA_API_KEY=
 OPENAI_MODEL=gpt-5.6-terra
 ```
 
-Never commit `.env.local` or paste credentials into prompts, issues, logs, screenshots, or Entire checkpoints.
+Never commit `.env.local` or place credentials in prompts, issues, logs, screenshots, or repository history.
 
 ## Verification
 
 ```bash
-npm run lint
 npm test
+npm run lint
+npm run typecheck
 npm audit --audit-level=low
+git diff --check
 ```
 
-`npm test` builds the full Cloudflare/vinext app, verifies server rendering, checks the principal browser-security headers, and asserts that the HTML contains no credential-like material.
+The suite builds the Cloudflare/vinext application and covers server rendering, public-copy restrictions, security headers, API negative paths, provider cancellation, qualification boundaries, safe origin normalization, and evidence/reference linking.
 
 ## API
 
@@ -92,32 +117,29 @@ npm audit --audit-level=low
 
 ```json
 {
-  "brief": "Find European enterprise software startups founded since 2020 with credible recent partnerships, grants, or product launches that signal operational momentum."
+  "brief": "Find European enterprise software startups founded since 2020, below €30M in disclosed funding, with credible recent partnerships."
 }
 ```
 
-The response contains the validated thesis, compiled Cala query, ranked companies, score breakdowns, evidence ledger, caveats, timings, and an audit request ID.
+The customer response contains the validated thesis, qualified company cards, source-linked evidence claims, explicit missing/failed criteria, conflicting facts when Cala states them, and customer-safe research notes. Internal provider input, narratives, entity identifiers, timing measurements, and diagnostic identifiers remain server-side.
 
-## Technical choices
+## Architecture
 
-- **Cala**: `/v1/knowledge/query` provides typed rows; `/v1/knowledge/search` adds KnowBits and explainability. [Official Cala API docs](https://docs.cala.ai/api-reference/query)
-- **OpenAI**: the Responses API uses strict JSON Schema output, with `store: false`. [Official Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs)
-- **Aikido**: dependency, static-code, secret, IaC, license, and malware scanning for the public repository.
-- **Entire**: checkpoint provenance plus review/investigation trails showing why the security boundaries exist.
-- **Entire Build Passport**: a sanitized, interactive Labs snapshot showing review closure, line-level `why`/`blame`, expert routing, and token-efficiency signals. See [docs/ENTIRE-LABS.md](./docs/ENTIRE-LABS.md).
-- **Sites / vinext**: React Server Components and API routes compiled for Cloudflare Workers.
+- **Cala** for structured company knowledge and sourced explainability
+- **OpenAI Responses API** for a strict-schema sourcing plan with `store: false`
+- **React / vinext** for the application and API routes
+- **Cloudflare Workers** for the runtime and security headers
 
-## Honest limitations
+The existing Cloudflare/vinext architecture, server-only credentials, request controls, and abort behavior are intentionally preserved.
 
-- Ranking quality is bounded by the fields and freshness Cala returns for a specific thesis.
-- Currency conversion is not attempted; the demo treats Cala's normalized/parsed funding value as EUR millions when the query requests EUR.
-- The in-memory rate limit is per Worker isolate, suitable for a hackathon demo but not a global production quota.
+## Development evidence boundary
+
+Repository-development evidence is deliberately separated from the customer experience. The public UI contains no development profiles, source-control links, security-vendor status, checkpoint data, agent sessions, revision details, usage metrics, or build diagnostics. Those materials remain in the repository documentation and the project’s Entire profile for reviewers who explicitly need them; see [docs/ENTIRE-LABS.md](./docs/ENTIRE-LABS.md).
+
+## Limitations
+
+- Qualification is bounded by the structured fields and sources Cala returns for a given thesis.
+- Geography and sector matching use conservative, deterministic term sets and may place a valid company in verification when wording is unusual.
+- Currency conversion is not attempted; the query requests EUR and the parser treats normalized returned amounts as EUR millions.
+- The rate limiter is local to a Worker isolate, not a distributed quota service.
 - A shortlist is a starting point for human due diligence, not a recommendation to invest.
-
-## Demo path (under two minutes)
-
-1. Run the prepared European enterprise-software brief.
-2. Show the strict plan and expand the compiled Cala query.
-3. Read the top skyline score; open its five-part breakdown.
-4. Show a Cala entity/KnowBit and a deliberately missing field scoring zero.
-5. End on Aikido's clean scan and Entire's trail for the exact security line.

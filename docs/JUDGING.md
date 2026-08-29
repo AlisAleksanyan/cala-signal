@@ -1,65 +1,61 @@
-# Judge map
+# Review map
 
-## Main-track thesis
+## Customer outcome
 
-**One sentence:** CALA SIGNAL turns an investor's natural-language opportunity thesis into a traceable Cala search and an inspectable ranked startup shortlist.
+**One sentence:** CALA SIGNAL turns an investor’s natural-language thesis into a source-backed decision workspace that separates qualified leads from companies requiring verification and companies excluded by known facts.
 
-**Who pays:** early-stage investors, corporate venture teams, accelerators, and ecosystem operators who repeatedly source companies against a narrow mandate.
+**Audience:** early-stage investors, accelerators, corporate venture and innovation teams, and ecosystem operators.
 
-**What they buy:** faster first-pass sourcing with an evidence trail and a visible due-diligence queue.
+**Value:** faster first-pass sourcing without hiding uncertainty or turning internal implementation evidence into customer-facing clutter.
 
-**Why it matters:** the time saved is not creating a list; it is eliminating false confidence and making the first shortlist reviewable by the rest of the team.
+## Customer experience
 
-## Creativity
+- The first viewport names the audience, problem, and result: a source-backed startup shortlist in about a minute.
+- One textarea and descriptive thesis presets keep the workflow focused.
+- The outcome preview emphasizes Qualified leads, Verification queue, and Evidence receipts.
+- Results lead with a thesis summary and three explicit decision groups.
+- Zero verified matches is stated plainly.
+- Company cards contain status, Evidence readiness, location, founding year, funding, latest signal, missing/failed criteria, and useful sources.
+- The deterministic breakdown remains available behind a disclosure.
+- Copy shortlist creates a client-side plain-text memo from the visible result.
+- Customer-facing pages contain no development provenance, source-control, security-vendor, revision, session, usage, or provider-diagnostic material.
 
-- The skyline is not a vanity chart: its shape comes from a disclosed evidence-quality model.
-- Missing data is a first-class output, not hidden behind prose.
-- One thesis produces both a computed shortlist and a source ledger.
+## Qualification correctness
 
-## Technical complexity
+| State | Deterministic boundary |
+| --- | --- |
+| Verified match | Known compliant founding year and funding, plus demonstrable geography and sector fit |
+| Needs verification | Any hard criterion is unknown or not demonstrably matched |
+| Outside thesis | Known founding year is too early or known funding exceeds the ceiling |
 
-- strict OpenAI Structured Output and independent runtime validation
-- bounded server-side Cala query compiler
-- concurrent use of Cala structured and sourced endpoints
-- tolerant normalization of dynamic Cala row schemas
-- entity matching and deterministic multi-factor ranking
-- rate limit, input/body constraints, timeouts, safe URL parsing, generic failures, no-store responses, and browser security headers
-- 18 passing build/render/API-negative-path/provenance tests, including timeout, pre-abort, mid-flight abort, and listener-cleanup coverage for OpenAI and Cala, Cala sibling cancellation, and Build Passport redaction/link allowlists
+Qualification never depends on the Evidence readiness score. Tests cover the verified path, missing founding year/funding, and both known exclusion boundaries.
 
 ## Cala depth
 
-| Cala capability | Product use |
+| Cala capability | Customer use |
 | --- | --- |
-| `knowledge/query` | typed rows for the score and company cards |
-| `knowledge/search` | narrative, KnowBits, entities, and explainability |
-| entity IDs | traceable company identity |
-| context IDs | evidence ledger and audit reference |
-| natural-language input | compiled bounded search without brittle custom query syntax |
+| `knowledge/query` | Structured fields for company facts and deterministic qualification |
+| `knowledge/search` | Supporting context, explainability, and matching company mentions |
+| Context references | Reconcile an explanation claim with the context that supports it |
+| Safe origins | Link a claim only when a bounded HTTP(S) origin is returned |
+| Missing/conflicting evidence | Keep unresolved criteria and provider-stated conflicts visible |
 
-## Aikido evidence target
+Both knowledge requests run in parallel. Context, origins, explainability, references, entities, and provider text are bounded before use. Provider Markdown and HTML are rendered only as escaped text.
 
-- 0 critical, high, medium, and low findings on the exact public default-branch revision
-- no ignored findings used to manufacture the score
-- dependency/SCA, SAST, secrets, IaC, licenses, and malware scanners completed
-- committed lockfile and public scan screenshot showing repository + revision + timestamp
-- local `npm audit --audit-level=low` and test output as supporting, not substitute, evidence
+## Production safeguards
 
-## Entire evidence target
+- strict structured planning plus independent runtime validation
+- bounded server-side Cala query compiler
+- JSON-only 4 KB request cap and 24–600-character thesis limit
+- per-client request bucket
+- provider timeout, client abort, sibling cancellation, and listener cleanup
+- HTTP(S)-only URL normalization
+- generic `no-store` API errors with no provider payload leakage
+- restrictive browser security headers
+- focused build/render/API/qualification/evidence/cancellation tests
 
-- checkpoints named for decisions, not generic “progress”
-- one Labs review focused on the untrusted-input → OpenAI → compiler → Cala boundary
-- review findings addressed, then a clean follow-up trail
-- `entire blame` on the plan-validation/compile line
-- `entire why` explaining why raw user input cannot become a Cala query
-- an in-product Entire Build Passport applying `review`, `why`, `blame`, `experts`, `tokens`, and checkpoint search to real repository evidence
-- a visible two-medium-findings → two-fix-commits → clean-follow-up-review closure loop
-- an allowlisted public snapshot with no runtime Entire credential, full prompt, transcript, email, or local path
-- no credentials, PII, private URLs, screenshots, or unrelated conversation in public checkpoints
+## Development evidence separation
 
-## Submission one-liner
+Entire evidence is deliberately kept out of the customer product. Review trails, historical implementation rationale, and experimental workflow notes live in the Entire profile and [ENTIRE-LABS.md](./ENTIRE-LABS.md). The removed public snapshot and its component, tests, and styles are not part of the shipped customer experience.
 
-> CALA SIGNAL finds overlooked startups from a plain-English investment thesis, then shows every Cala-backed fact, missing field, and scoring decision behind the shortlist.
-
-## Short description
-
-> Investors should not have to choose between an opaque AI answer and a raw database export. CALA SIGNAL uses OpenAI Structured Outputs to convert a sourcing thesis into a constrained plan, compiles a safe Cala request, retrieves both structured company rows and traceable evidence, and ranks candidates with deterministic math. Every score is inspectable, every missing fact loses points, and every result ends in a due-diligence queue.
+Security-scanner evidence and repository review material likewise belong in reviewer-facing systems and documentation, not in the customer UI.

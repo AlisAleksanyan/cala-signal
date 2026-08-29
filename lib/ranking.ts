@@ -1,4 +1,12 @@
-import type { CalaEntity, RankedCompany, ScoreBreakdown, ThesisPlan } from "./types";
+import type {
+  CalaEntity,
+  CandidateQualification,
+  Geography,
+  RankedCompany,
+  ScoreBreakdown,
+  Sector,
+  ThesisPlan,
+} from "./types";
 
 const fieldAliases = {
   name: ["company", "name", "company_name", "startup"],
@@ -11,6 +19,29 @@ const fieldAliases = {
   momentum: ["momentum_signal", "recent_signal", "signal", "recent_development", "latest_event"],
   source: ["source_url", "source", "url", "evidence_url"],
 } as const;
+
+const sectorTerms: Record<Sector, readonly string[]> = {
+  "climate tech": ["climate tech", "climatetech", "cleantech", "clean tech", "renewable", "carbon", "energy transition", "sustainability", "solar", "hydrogen"],
+  "artificial intelligence": ["artificial intelligence", "machine learning", "generative ai", "ai"],
+  fintech: ["fintech", "financial technology", "payments", "banking software", "insurtech"],
+  "health tech": ["health tech", "healthtech", "digital health", "medtech", "medical technology"],
+  mobility: ["mobility", "transportation", "automotive", "logistics", "electric vehicle", "ev charging"],
+  "deep tech": ["deep tech", "deeptech", "quantum", "robotics", "advanced materials", "semiconductor", "space tech"],
+  biotech: ["biotech", "biotechnology", "life sciences", "therapeutics", "drug discovery"],
+  "enterprise software": ["enterprise software", "b2b software", "business software", "workflow software", "saas"],
+};
+
+const geographyTerms: Record<Geography, readonly string[]> = {
+  Barcelona: ["barcelona"],
+  Catalonia: ["catalonia", "catalunya", "barcelona", "girona", "tarragona", "lleida"],
+  Spain: ["spain", "espana", "spanish", "barcelona", "madrid", "valencia", "bilbao", "seville", "sevilla", "malaga", "zaragoza"],
+  "Southern Europe": [
+    "southern europe", "spain", "espana", "portugal", "italy", "italia", "greece", "malta", "cyprus", "slovenia", "croatia", "barcelona", "madrid", "lisbon", "lisboa", "porto", "milan", "milano", "rome", "roma", "athens",
+  ],
+  Europe: [
+    "europe", "european", "spain", "portugal", "france", "germany", "italy", "greece", "netherlands", "belgium", "luxembourg", "ireland", "austria", "switzerland", "denmark", "sweden", "norway", "finland", "iceland", "poland", "czechia", "czech republic", "slovakia", "hungary", "romania", "bulgaria", "slovenia", "croatia", "estonia", "latvia", "lithuania", "malta", "cyprus", "united kingdom", "uk", "barcelona", "madrid", "lisbon", "paris", "berlin", "munich", "milan", "rome", "amsterdam", "brussels", "dublin", "vienna", "zurich", "stockholm", "oslo", "helsinki", "warsaw", "prague", "bucharest", "tallinn", "london",
+  ],
+};
 
 function normalizedEntries(row: Record<string, unknown>): Map<string, unknown> {
   return new Map(Object.entries(row).map(([key, value]) => [key.toLowerCase().replace(/[\s-]+/g, "_"), value]));
@@ -69,13 +100,29 @@ function asDate(value: unknown): string | null {
 
 function asSafeUrl(value: unknown): string | null {
   const text = asText(value);
-  if (!text) return null;
+  if (!text || text.length > 2_048) return null;
   try {
     const url = new URL(text);
     return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
   } catch {
     return null;
   }
+}
+
+function normalizedPhrase(value: string): string {
+  return ` ${value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+}
+
+function includesTerm(value: string, term: string): boolean {
+  return normalizedPhrase(value).includes(normalizedPhrase(term));
+}
+
+function matchesSector(value: string | null, sector: Sector): boolean {
+  return Boolean(value && sectorTerms[sector].some((term) => includesTerm(value, term)));
+}
+
+function matchesGeography(value: string | null, geography: Geography): boolean {
+  return Boolean(value && geographyTerms[geography].some((term) => includesTerm(value, term)));
 }
 
 function freshnessPoints(date: string | null): number {
@@ -93,6 +140,48 @@ function matchingEntity(name: string, entities: CalaEntity[]): CalaEntity | unde
     const names = [entity.name, ...(entity.mentions || [])].map((item) => item.toLowerCase());
     return names.some((candidate) => candidate === needle || candidate.includes(needle) || needle.includes(candidate));
   });
+}
+
+function qualificationFor(
+  plan: ThesisPlan,
+  location: string | null,
+  sector: string | null,
+  foundedYear: number | null,
+  funding: number | null,
+): { qualification: CandidateQualification; missingCriteria: string[]; failedCriteria: string[]; geographyMatch: boolean; sectorMatch: boolean } {
+  const missingCriteria: string[] = [];
+  const failedCriteria: string[] = [];
+  const geographyMatch = matchesGeography(location, plan.geography);
+  const sectorMatch = matchesSector(sector, plan.sector);
+
+  if (foundedYear === null) missingCriteria.push("Founding year is not confirmed");
+  else if (foundedYear < plan.founded_after) failedCriteria.push(`Founded in ${foundedYear}, before the ${plan.founded_after} threshold`);
+
+  if (funding === null) missingCriteria.push("Disclosed funding is not confirmed");
+  else if (funding > plan.max_funding_millions) failedCriteria.push(`€${funding}M disclosed funding exceeds the €${plan.max_funding_millions}M ceiling`);
+
+  if (!location) missingCriteria.push("Location is not confirmed");
+  else if (!geographyMatch) failedCriteria.push(`Geography fit for ${plan.geography} is not demonstrated`);
+
+  if (!sector) missingCriteria.push("Sector is not confirmed");
+  else if (!sectorMatch) failedCriteria.push(`Sector fit for ${plan.sector} is not demonstrated`);
+
+  const outsideThesis = (foundedYear !== null && foundedYear < plan.founded_after)
+    || (funding !== null && funding > plan.max_funding_millions);
+  const verified = foundedYear !== null
+    && foundedYear >= plan.founded_after
+    && funding !== null
+    && funding <= plan.max_funding_millions
+    && geographyMatch
+    && sectorMatch;
+
+  return {
+    qualification: outsideThesis ? "outside_thesis" : verified ? "verified_match" : "needs_verification",
+    missingCriteria,
+    failedCriteria,
+    geographyMatch,
+    sectorMatch,
+  };
 }
 
 export function rankCompanies(
@@ -118,36 +207,31 @@ export function rankCompanies(
     const momentum = asText(pick(entries, fieldAliases.momentum));
     const sourceUrl = asSafeUrl(pick(entries, fieldAliases.source));
     const entity = matchingEntity(name, entities);
-
-    const geoMatch = location?.toLowerCase().includes(plan.geography.toLowerCase()) ?? false;
-    const sectorTokens = plan.sector.toLowerCase().split(" ");
-    const sectorMatch = sectorTokens.some((token) => sector?.toLowerCase().includes(token));
-    const thesisFit = (geoMatch ? 15 : location ? 7 : 0) + (sectorMatch ? 15 : sector ? 6 : 0);
-    const fundingGap = funding === null
-      ? 0
-      : funding <= plan.max_funding_millions
-        ? Math.round(20 * (1 - 0.6 * (funding / plan.max_funding_millions)))
-        : 0;
-    const freshness = freshnessPoints(latestDate);
-    const momentumPoints = momentum ? 15 : 0;
-    const completenessFields = [location, sector, foundedYear, funding, latestDate, momentum, sourceUrl || entity?.id].filter((value) => value !== null && value !== undefined).length;
-    const completeness = Math.round((completenessFields / 7) * 15);
+    const qualification = qualificationFor(plan, location, sector, foundedYear, funding);
 
     const scoreBreakdown: ScoreBreakdown = {
-      thesis_fit: Math.min(thesisFit, 30),
-      funding_gap: Math.min(fundingGap, 20),
-      evidence_freshness: freshness,
-      momentum: momentumPoints,
-      completeness,
+      thesis_evidence: (qualification.geographyMatch ? 15 : 0) + (qualification.sectorMatch ? 15 : 0),
+      capital_evidence: funding === null ? 0 : 20,
+      evidence_freshness: freshnessPoints(latestDate),
+      signal_evidence: momentum ? 15 : 0,
+      completeness: Math.round(([
+        location,
+        sector,
+        foundedYear,
+        funding,
+        latestDate,
+        momentum,
+        sourceUrl || entity?.id,
+      ].filter((value) => value !== null && value !== undefined).length / 7) * 15),
     };
     const score = Object.values(scoreBreakdown).reduce((sum, value) => sum + value, 0);
     const missingFields = [
       ["location", location],
       ["sector", sector],
-      ["founded year", foundedYear],
+      ["founding year", foundedYear],
       ["funding", funding],
       ["latest event date", latestDate],
-      ["momentum signal", momentum],
+      ["latest signal", momentum],
       ["source", sourceUrl || entity?.id],
     ].filter(([, value]) => value === null || value === undefined).map(([label]) => String(label));
 
@@ -161,15 +245,25 @@ export function rankCompanies(
       latest_event_date: latestDate,
       momentum_signal: momentum,
       source_url: sourceUrl,
-      entity_id: entity?.id || null,
       score,
       score_breakdown: scoreBreakdown,
       missing_fields: missingFields,
+      qualification: qualification.qualification,
+      missing_criteria: qualification.missingCriteria,
+      failed_criteria: qualification.failedCriteria,
+      evidence_claims: [],
+      conflicting_facts: [],
     });
   }
 
+  const qualificationOrder: Record<CandidateQualification, number> = {
+    verified_match: 0,
+    needs_verification: 1,
+    outside_thesis: 2,
+  };
+
   return companies
-    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+    .sort((a, b) => qualificationOrder[a.qualification] - qualificationOrder[b.qualification] || b.score - a.score || a.name.localeCompare(b.name))
     .slice(0, plan.result_count)
     .map((company, index) => ({ ...company, rank: index + 1 }));
 }
