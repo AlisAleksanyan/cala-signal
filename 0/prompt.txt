@@ -1,7 +1,10 @@
-Perform a final, purpose-scoped release audit for CALA SIGNAL in this repository. This is a public customer-facing investor sourcing product, so keep the work and transcript professional and free of credentials, private conversations, event strategy, or unrelated history.
+Network access is now available. Continue the same bounded final release audit.
 
-Inspect the current code and existing docs/ENTIRE-LABS.md. Update only docs/ENTIRE-LABS.md with a concise section titled "Final launch audit (2026-08-29)" that records verifiable, customer-trust-focused engineering evidence from the current repository: source-backed hard-criterion qualification, direct-context receipt boundaries, signed IP-bound shortlist tokens, atomic D1 quota enforcement, and the local quality gates. Do not claim a tool or workflow succeeded unless you personally verify it. Do not include tokens, secrets, user prompts, raw session text, internal IDs, or private repository history. Do not edit docs/DEMO.md or any other file.
+Before any commit:
+1. Rerun npm audit --audit-level=low yourself.
+2. If it returns 0 vulnerabilities, update only the Local quality gates sentence in docs/ENTIRE-LABS.md so it accurately records that npm audit passed with 0 vulnerabilities; remove the obsolete DNS limitation.
+3. Rerun git diff --check and verify docs/ENTIRE-LABS.md is the only changed file.
+4. Verify docs/DEMO.md is byte-unchanged.
+5. If and only if all required gates are now green, commit exactly with message: docs: record final launch audit
 
-Run npm test, npm run lint, npm run typecheck, npm audit --audit-level=low, and git diff --check. If all pass, commit the single documentation change with exactly this message: docs: record final launch audit
-
-Do not push, deploy, browse, call providers, change dependencies, or modify application code. Return the commit SHA and the exact validation results.
+Do not push, deploy, browse, expose credentials, mention private event strategy, or modify any other file.
