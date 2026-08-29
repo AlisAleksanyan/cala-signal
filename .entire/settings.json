@@ -1,11 +1,5 @@
 {
-  "checkpoints": {
-    "primary": {
-      "type": "git-refs"
-    }
-  },
   "enabled": true,
-  "review_default_profile": "hackathon-security",
   "review_profiles": {
     "hackathon-security": {
       "task": "Audit CALA SIGNAL's security and reliability boundaries. Focus on server-only provider secrets, prompt-to-query validation, upstream error handling, rate limiting, redirect/SSRF/XSS risks, Cloudflare runtime compatibility, live Cala latency, and missing adversarial tests. Report only actionable findings with file and line evidence.",
@@ -26,6 +20,12 @@
         "agent": "codex"
       },
       "output": "trail"
+    }
+  },
+  "review_default_profile": "hackathon-security",
+  "checkpoints": {
+    "primary": {
+      "type": "git-refs"
     }
   }
 }
