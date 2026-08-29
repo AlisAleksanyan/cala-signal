@@ -104,6 +104,7 @@ The response contains the validated thesis, compiled Cala query, ranked companie
 - **OpenAI**: the Responses API uses strict JSON Schema output, with `store: false`. [Official Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs)
 - **Aikido**: dependency, static-code, secret, IaC, license, and malware scanning for the public repository.
 - **Entire**: checkpoint provenance plus review/investigation trails showing why the security boundaries exist.
+- **Entire Build Passport**: a sanitized, interactive Labs snapshot showing review closure, line-level `why`/`blame`, expert routing, and token-efficiency signals. See [docs/ENTIRE-LABS.md](./docs/ENTIRE-LABS.md).
 - **Sites / vinext**: React Server Components and API routes compiled for Cloudflare Workers.
 
 ## Honest limitations

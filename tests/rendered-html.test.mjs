@@ -41,6 +41,10 @@ test("server-renders the CALA SIGNAL product", async () => {
   assert.match(html, /Run live scout/);
   assert.match(html, /OpenAI/);
   assert.match(html, /Cala/);
+  assert.match(html, /Every AI edit should ship with a receipt/);
+  assert.match(html, /Entire Labs/);
+  assert.match(html, /property="og:image"/);
+  assert.match(html, /\/og\.png/);
   assert.doesNotMatch(html, /OPENAI_API_KEY|CALA_API_KEY|sk-[A-Za-z0-9]/);
 });
 

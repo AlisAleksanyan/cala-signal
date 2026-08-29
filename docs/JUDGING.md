@@ -24,7 +24,7 @@
 - tolerant normalization of dynamic Cala row schemas
 - entity matching and deterministic multi-factor ranking
 - rate limit, input/body constraints, timeouts, safe URL parsing, generic failures, no-store responses, and browser security headers
-- 13 passing build/render/API-negative-path tests, including timeout, pre-abort, mid-flight abort, and listener-cleanup coverage for OpenAI and Cala, plus Cala sibling cancellation
+- 18 passing build/render/API-negative-path/provenance tests, including timeout, pre-abort, mid-flight abort, and listener-cleanup coverage for OpenAI and Cala, Cala sibling cancellation, and Build Passport redaction/link allowlists
 
 ## Cala depth
 
@@ -51,6 +51,9 @@
 - review findings addressed, then a clean follow-up trail
 - `entire blame` on the plan-validation/compile line
 - `entire why` explaining why raw user input cannot become a Cala query
+- an in-product Entire Build Passport applying `review`, `why`, `blame`, `experts`, `tokens`, and checkpoint search to real repository evidence
+- a visible two-medium-findings → two-fix-commits → clean-follow-up-review closure loop
+- an allowlisted public snapshot with no runtime Entire credential, full prompt, transcript, email, or local path
 - no credentials, PII, private URLs, screenshots, or unrelated conversation in public checkpoints
 
 ## Submission one-liner

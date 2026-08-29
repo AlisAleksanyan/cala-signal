@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { RankedCompany, ScoutResponse } from "@/lib/types";
+import { EntireBuildPassport } from "./EntireBuildPassport";
 
 const EXAMPLES = [
   "Find European enterprise software startups founded since 2020 with credible recent partnerships, grants, or product launches that signal operational momentum.",
@@ -220,6 +221,7 @@ export function SignalApp() {
         </a>
         <div className="nav-proof">
           <span><i /> LIVE PIPELINE</span>
+          <a href="#build-passport">ENTIRE BUILD PASSPORT</a>
           <span>OPENAI × CALA</span>
         </div>
       </nav>
@@ -296,6 +298,8 @@ export function SignalApp() {
           </div>
         </section>
       )}
+
+      <EntireBuildPassport />
 
       <footer>
         <div className="brand"><span className="brand-mark">CS</span><span>CALA SIGNAL<small>Built at The Summer Lock-In</small></span></div>

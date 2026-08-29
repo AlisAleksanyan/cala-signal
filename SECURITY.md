@@ -19,6 +19,7 @@
 | Cala → app | dynamic JSON rows, text, URLs | runtime shape filtering, bounded arrays/strings, HTTP(S)-only URL parser, React text escaping |
 | App → browser | shortlist and evidence | same-origin CSP, no-store JSON, generic errors, no upstream payload leakage |
 | Git / Entire | source and checkpoint transcript | `.env*` ignored; never place keys, personal data, or private links in prompts or commits |
+| Entire → public Build Passport | checkpoint-derived snapshot | build-time allowlist only; no runtime CLI/API, tokens, full prompts, transcripts, emails, or local paths |
 
 ## Abuse cases explicitly handled
 
@@ -29,6 +30,7 @@
 - provider timeout, provider rate limiting, missing keys, and empty structured results
 - browser framing, unintended capabilities, MIME confusion, and referrer leakage
 - accidental secret inclusion in rendered HTML
+- accidental publication of private Entire checkpoint material or non-allowlisted proof links
 
 ## Known residual risk
 
@@ -48,4 +50,5 @@
 - [ ] `.env.local` remains untracked
 - [ ] public GitHub repository contains no secrets, PII, private event links, or generated build output
 - [ ] Entire trail contains only public-safe prompts and intentional checkpoints
+- [ ] Build Passport redaction and public-link allowlist tests pass
 - [ ] Cala and OpenAI error paths tested without returning upstream bodies
