@@ -6,7 +6,7 @@ import {
   type Sector,
   type Signal,
   type ThesisPlan,
-} from "./types";
+} from "./types.ts";
 
 const MIN_BRIEF_LENGTH = 24;
 const MAX_BRIEF_LENGTH = 600;

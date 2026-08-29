@@ -1,6 +1,6 @@
-import { GEOGRAPHIES, SECTORS, SIGNALS, type ThesisPlan } from "./types";
-import { validateThesisPlan } from "./validation";
-import { createLinkedAbortController } from "./abort";
+import { GEOGRAPHIES, SECTORS, SIGNALS, type ThesisPlan } from "./types.ts";
+import { validateThesisPlan } from "./validation.ts";
+import { createLinkedAbortController } from "./abort.ts";
 
 const OPENAI_URL = "https://api.openai.com/v1/responses";
 
@@ -51,11 +51,15 @@ function extractOutputText(payload: unknown): string | null {
   return null;
 }
 
-export async function planThesis(brief: string, requestSignal?: AbortSignal): Promise<ThesisPlan> {
+export async function planThesis(
+  brief: string,
+  requestSignal?: AbortSignal,
+  timeoutMs = 18_000,
+): Promise<ThesisPlan> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OpenAI is not configured.");
 
-  const operation = createLinkedAbortController(requestSignal, 18_000);
+  const operation = createLinkedAbortController(requestSignal, timeoutMs);
   try {
     const response = await fetch(OPENAI_URL, {
       method: "POST",
