@@ -1,0 +1,13 @@
+Create one public-safe documentation artifact: docs/ENTIRE-PROVENANCE-SNAPSHOT.md.
+
+Purpose: demonstrate how the repository uses Entire Labs provenance to answer three practical maintenance questions without exposing telemetry in the customer application.
+
+Use only these verified observations for docs/ENTIRE-LABS.md:
+- `entire experts` identified Codex with model gpt-5.6-sol, one session, one checkpoint, and 9 agent-attributed lines out of 10 committed lines for the scoped change.
+- `entire blame` classified the 48-line file as 38 human lines and 10 mixed lines, or 79% human and 21% mixed.
+- `entire why` resolved the Final launch audit heading to the same scoped checkpoint, session, agent, and model provenance.
+
+Include a compact question-to-command-to-decision table for experts, blame, and why, plus a short explanation of why this matters for safe maintenance. State that these are repository-development observations and not customer-facing product data. Do not include credentials, prompts, transcripts, emails, local paths, private links, event strategy, raw commands beyond the three command names, or internal identifiers. Do not modify runtime code, dependencies, configuration, docs/DEMO.md, or any other file.
+
+Run git diff --check, verify docs/DEMO.md is byte-unchanged, and commit only this new file with exact message: docs: add Entire provenance snapshot
+Do not push, deploy, or browse.
