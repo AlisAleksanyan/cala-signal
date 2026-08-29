@@ -1,0 +1,16 @@
+Create one public-safe documentation artifact for the current CALA SIGNAL repository: docs/ENTIRE-OPERATIONS-SNAPSHOT.md.
+
+Purpose: make the repository's Entire Labs usage legible to reviewers without placing any development telemetry in the customer application.
+
+Use only these verified current values:
+- committed checkpoints available/analyzed: 1/1
+- model provenance for docs/ENTIRE-LABS.md: Codex, gpt-5.6-sol
+- observed token profile: 932,904 total; 82,518 input; 841,984 cache-read; 8,402 output; 20 API calls
+- attribution on docs/ENTIRE-LABS.md: 9 agent-attributed lines out of 10 committed lines in the checkpoint
+- observed signals: context-replay hotspot and API-call amplification
+- recommendations: search before reinvestigation, batch diagnostics, preserve then compact
+
+Explain that checkpoint-observed totals may overlap and are not guaranteed unique spend. Include a compact table and three concrete workflow decisions. Do not include credentials, prompts, transcripts, emails, local paths, private links, event strategy, or internal identifiers. Do not modify runtime code, dependencies, configuration, docs/DEMO.md, or any other file.
+
+Run git diff --check, verify docs/DEMO.md is byte-unchanged, and commit only this new file with exact message: docs: add Entire operations snapshot
+Do not push, deploy, or browse.
