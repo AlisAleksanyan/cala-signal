@@ -33,9 +33,9 @@ Qualification is deterministic and separate from scoring.
 
 | State | Rule |
 | --- | --- |
-| `verified_match` | Founding year and disclosed funding are known and compliant, and geography and sector fit are demonstrable. |
+| `verified_match` | Founding year and disclosed funding are known and compliant, geography and sector fit are demonstrable, a safe source is present, and Cala reports no relevant conflict. |
 | `needs_verification` | A hard criterion is unknown or geography/sector fit is not demonstrably matched. |
-| `outside_thesis` | A known founding year is before the threshold or known disclosed funding exceeds the ceiling. |
+| `outside_thesis` | Any known hard criterion fails: founding year, disclosed funding, geography, or sector. |
 
 Uncertain companies remain available for verification rather than being silently discarded.
 
@@ -46,10 +46,10 @@ The 100-point **Evidence readiness** score helps teams prioritize review; it doe
 | Component | Points | Rule |
 | --- | ---: | --- |
 | Thesis evidence | 30 | Demonstrated geography and sector coverage |
-| Capital evidence | 20 | A disclosed funding value is available |
+| Capital evidence | 20 | A disclosed funding value is available with a safe company source |
 | Evidence freshness | 20 | 20 points within 12 months, 12 within 24 months, 5 within 48 months |
-| Latest signal | 15 | Cala returns a concrete recent signal |
-| Completeness | 15 | Seven decision fields are present, including a structured source or resolved entity |
+| Latest signal | 15 | Cala returns a concrete recent signal with a safe company source |
+| Completeness | 15 | Seven decision fields are present, including a safe structured source |
 
 The full deterministic breakdown stays behind a disclosure on each company card.
 
@@ -59,7 +59,7 @@ The full deterministic breakdown stays behind a disclosure on each company card.
 - `POST /v1/knowledge/search` returns supporting context, explainability, and matching entities.
 - Both requests run in parallel under one linked abort controller and one 110-second provider timeout.
 - Dynamic rows are normalized through bounded aliases rather than trusted as a fixed schema.
-- Search context retains bounded source origins when Cala returns them. Only HTTP(S) URLs reach the client.
+- Search context retains bounded source origins when Cala returns them. Only HTTPS URLs reach the client.
 - Explainability references are reconciled with context references and company mentions so relevant claims can link to their supporting origins.
 - Provider Markdown or HTML is never rendered; evidence is displayed as escaped plain text.
 
@@ -74,8 +74,8 @@ The full deterministic breakdown stays behind a disclosure on each company card.
 - Provider calls preserve client cancellation, timeout cancellation, sibling cancellation, and listener cleanup.
 - API responses are `no-store`; upstream payloads, compiled provider input, provider narratives, internal identifiers, and timing data are not returned to the customer workspace.
 - Browser responses keep the same-origin Content Security Policy, frame protection, restrictive Permissions Policy, HSTS, and `nosniff`.
-- The in-memory rate bucket limits a client to eight requests per minute per Worker isolate.
-- External links accept only HTTP(S), with bounded URLs, labels, claims, references, and arrays.
+- Cross-origin browser requests are rejected, and the in-memory rate bucket limits a client to two requests per ten minutes per Worker isolate.
+- External links accept only HTTPS, with bounded URLs, labels, claims, references, and arrays.
 
 See [SECURITY.md](./SECURITY.md) for the complete trust model.
 

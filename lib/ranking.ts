@@ -73,7 +73,8 @@ function asYear(value: unknown): number | null {
 
 function asFundingMillions(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) {
-    return value > 1_000_000 ? Math.round((value / 1_000_000) * 10) / 10 : Math.round(value * 10) / 10;
+    if (value < 0) return null;
+    return value >= 10_000 ? Math.round((value / 1_000_000) * 10) / 10 : Math.round(value * 10) / 10;
   }
   const text = asText(value);
   if (!text) return null;
@@ -86,7 +87,7 @@ function asFundingMillions(value: unknown): number | null {
   if (["b", "bn", "billion"].includes(unit)) return Math.round(amount * 10_000) / 10;
   if (["k", "thousand"].includes(unit)) return Math.round((amount / 1_000) * 10) / 10;
   if (["m", "million"].includes(unit)) return Math.round(amount * 10) / 10;
-  return amount > 1_000_000 ? Math.round((amount / 1_000_000) * 10) / 10 : Math.round(amount * 10) / 10;
+  return amount >= 10_000 ? Math.round((amount / 1_000_000) * 10) / 10 : Math.round(amount * 10) / 10;
 }
 
 function asDate(value: unknown): string | null {
@@ -103,7 +104,7 @@ function asSafeUrl(value: unknown): string | null {
   if (!text || text.length > 2_048) return null;
   try {
     const url = new URL(text);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+    return url.protocol === "https:" ? url.toString() : null;
   } catch {
     return null;
   }
@@ -128,18 +129,11 @@ function matchesGeography(value: string | null, geography: Geography): boolean {
 function freshnessPoints(date: string | null): number {
   if (!date) return 0;
   const days = (Date.now() - Date.parse(date)) / 86_400_000;
+  if (!Number.isFinite(days) || days < -1) return 0;
   if (days <= 365) return 20;
   if (days <= 730) return 12;
   if (days <= 1_460) return 5;
   return 0;
-}
-
-function matchingEntity(name: string, entities: CalaEntity[]): CalaEntity | undefined {
-  const needle = name.toLowerCase();
-  return entities.find((entity) => {
-    const names = [entity.name, ...(entity.mentions || [])].map((item) => item.toLowerCase());
-    return names.some((candidate) => candidate === needle || candidate.includes(needle) || needle.includes(candidate));
-  });
 }
 
 function qualificationFor(
@@ -166,8 +160,7 @@ function qualificationFor(
   if (!sector) missingCriteria.push("Sector is not confirmed");
   else if (!sectorMatch) failedCriteria.push(`Sector fit for ${plan.sector} is not demonstrated`);
 
-  const outsideThesis = (foundedYear !== null && foundedYear < plan.founded_after)
-    || (funding !== null && funding > plan.max_funding_millions);
+  const outsideThesis = failedCriteria.length > 0;
   const verified = foundedYear !== null
     && foundedYear >= plan.founded_after
     && funding !== null
@@ -186,7 +179,7 @@ function qualificationFor(
 
 export function rankCompanies(
   rows: Record<string, unknown>[],
-  entities: CalaEntity[],
+  _entities: CalaEntity[],
   plan: ThesisPlan,
 ): RankedCompany[] {
   const seen = new Set<string>();
@@ -206,14 +199,14 @@ export function rankCompanies(
     const latestDate = asDate(pick(entries, fieldAliases.date));
     const momentum = asText(pick(entries, fieldAliases.momentum));
     const sourceUrl = asSafeUrl(pick(entries, fieldAliases.source));
-    const entity = matchingEntity(name, entities);
     const qualification = qualificationFor(plan, location, sector, foundedYear, funding);
+    const sourceBacked = Boolean(sourceUrl);
 
     const scoreBreakdown: ScoreBreakdown = {
       thesis_evidence: (qualification.geographyMatch ? 15 : 0) + (qualification.sectorMatch ? 15 : 0),
-      capital_evidence: funding === null ? 0 : 20,
+      capital_evidence: funding === null || !sourceBacked ? 0 : 20,
       evidence_freshness: freshnessPoints(latestDate),
-      signal_evidence: momentum ? 15 : 0,
+      signal_evidence: momentum && sourceBacked ? 15 : 0,
       completeness: Math.round(([
         location,
         sector,
@@ -221,7 +214,7 @@ export function rankCompanies(
         funding,
         latestDate,
         momentum,
-        sourceUrl || entity?.id,
+        sourceUrl,
       ].filter((value) => value !== null && value !== undefined).length / 7) * 15),
     };
     const score = Object.values(scoreBreakdown).reduce((sum, value) => sum + value, 0);
@@ -232,7 +225,7 @@ export function rankCompanies(
       ["funding", funding],
       ["latest event date", latestDate],
       ["latest signal", momentum],
-      ["source", sourceUrl || entity?.id],
+      ["source", sourceUrl],
     ].filter(([, value]) => value === null || value === undefined).map(([label]) => String(label));
 
     companies.push({

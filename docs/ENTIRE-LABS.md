@@ -23,6 +23,10 @@ The relevant historical closure loop includes:
 - focused changes that addressed those findings;
 - a follow-up review that found no remaining actionable issue in that scope.
 
+The current repository also defines a `launch-readiness` Entire Review profile. It asks separate reviewers to audit customer activation, Cala evidence lineage, hard-constraint truthfulness, public/development separation, abuse resistance, accessibility, and regression coverage, then consolidates their findings into a trail.
+
+For a second experimental workflow, [CALA-LINEAGE-INVESTIGATION.md](./CALA-LINEAGE-INVESTIGATION.md) is a reusable Entire Investigate seed. Multiple agents can test the product's qualification invariants and constraint-drift cases against one shared findings document instead of producing disconnected reviews.
+
 ## Public-product rule
 
 Future customer UI work should preserve this boundary:

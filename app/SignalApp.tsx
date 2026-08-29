@@ -34,6 +34,14 @@ function scoreTone(score: number): string {
   return "signal-weak";
 }
 
+function sourceHost(value: string): string {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return "supporting source";
+  }
+}
+
 function ScoreBar({ label, value, max }: { label: string; value: number; max: number }) {
   return (
     <div className="score-row">
@@ -89,9 +97,9 @@ function CompanyCard({ company }: { company: RankedCompany }) {
           {company.evidence_claims.map((claim) => (
             <div className="evidence-claim" key={`${claim.claim}-${claim.source_url ?? "unlinked"}`}>
               <p>{claim.claim}</p>
-              {claim.source_url && (
+              {claim.source_url && claim.source_url !== company.source_url && (
                 <a href={claim.source_url} target="_blank" rel="noreferrer">
-                  {claim.source_label || "Open supporting source"} <span aria-hidden="true">↗</span>
+                  {claim.source_label ? `${claim.source_label} · ` : ""}{sourceHost(claim.source_url)} <span aria-hidden="true">↗</span>
                 </a>
               )}
             </div>
@@ -100,14 +108,14 @@ function CompanyCard({ company }: { company: RankedCompany }) {
             <div className="evidence-claim conflict-claim" key={`${claim.claim}-${claim.source_url ?? "conflict"}`}>
               <strong>Conflicting evidence</strong>
               <p>{claim.claim}</p>
-              {claim.source_url && <a href={claim.source_url} target="_blank" rel="noreferrer">Review source <span aria-hidden="true">↗</span></a>}
+              {claim.source_url && claim.source_url !== company.source_url && <a href={claim.source_url} target="_blank" rel="noreferrer">Review on {sourceHost(claim.source_url)} <span aria-hidden="true">↗</span></a>}
             </div>
           ))}
         </div>
       )}
 
       <div className="card-actions">
-        {company.source_url && <a href={company.source_url} target="_blank" rel="noreferrer">Open company source <span aria-hidden="true">↗</span></a>}
+        {company.source_url && <a href={company.source_url} target="_blank" rel="noreferrer">Open source · {sourceHost(company.source_url)} <span aria-hidden="true">↗</span></a>}
         <details className="score-details">
           <summary>Evidence readiness details</summary>
           <div className="score-grid">
@@ -189,6 +197,11 @@ function Results({ result }: { result: ScoutResponse }) {
     needs_verification: result.companies.filter((company) => company.qualification === "needs_verification"),
     outside_thesis: result.companies.filter((company) => company.qualification === "outside_thesis"),
   }), [result.companies]);
+  const evidenceReceiptCount = useMemo(() => new Set(result.companies.flatMap((company) => [
+    company.source_url,
+    ...company.evidence_claims.map((claim) => claim.source_url),
+    ...company.conflicting_facts.map((claim) => claim.source_url),
+  ].filter((url): url is string => Boolean(url)))).size, [result.companies]);
 
   async function copyShortlist() {
     try {
@@ -230,7 +243,7 @@ function Results({ result }: { result: ScoutResponse }) {
       <div className="result-counts" aria-label="Shortlist outcome">
         <div><strong>{grouped.verified_match.length}</strong><span>Qualified leads</span></div>
         <div><strong>{grouped.needs_verification.length}</strong><span>Verification queue</span></div>
-        <div><strong>{result.companies.reduce((count, company) => count + company.evidence_claims.filter((claim) => claim.source_url).length + (company.source_url ? 1 : 0), 0)}</strong><span>Evidence receipts</span></div>
+        <div><strong>{evidenceReceiptCount}</strong><span>Unique source receipts</span></div>
       </div>
 
       {grouped.verified_match.length === 0 && (

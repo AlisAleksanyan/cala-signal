@@ -61,13 +61,13 @@ test("ships browser security headers", async () => {
 });
 
 test("rejects malformed scout requests before provider calls", async () => {
-  const wrongType = await callApi(new Request("http://localhost/api/scout", { method: "POST", body: "hello" }));
+  const wrongType = await callApi(new Request("http://localhost/api/scout", { method: "POST", headers: { origin: "http://localhost" }, body: "hello" }));
   assert.equal(wrongType.status, 415);
   assert.equal("request_id" in await wrongType.json(), false);
 
   const tooShort = await callApi(new Request("http://localhost/api/scout", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: "http://localhost" },
     body: JSON.stringify({ brief: "find AI" }),
   }));
   assert.equal(tooShort.status, 400);
@@ -75,10 +75,19 @@ test("rejects malformed scout requests before provider calls", async () => {
   assert.equal(tooShort.headers.get("x-content-type-options"), "nosniff");
 });
 
+test("rejects cross-origin scout requests", async () => {
+  const response = await callApi(new Request("http://localhost/api/scout", {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: "https://attacker.example" },
+    body: JSON.stringify({ brief: "Scout Barcelona AI startups founded since 2020 below fifteen million euros." }),
+  }));
+  assert.equal(response.status, 403);
+});
+
 test("rejects oversized request bodies", async () => {
   const oversized = await callApi(new Request("http://localhost/api/scout", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: "http://localhost" },
     body: JSON.stringify({ brief: "x".repeat(5_000) }),
   }));
   assert.equal(oversized.status, 413);

@@ -9,8 +9,8 @@ export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 4_096;
-const RATE_WINDOW_MS = 60_000;
-const RATE_LIMIT = 8;
+const RATE_WINDOW_MS = 10 * 60_000;
+const RATE_LIMIT = 2;
 const rateBuckets = new Map<string, { count: number; resetsAt: number }>();
 
 const responseHeaders = {
@@ -30,6 +30,18 @@ function json(payload: unknown, status = 200, extraHeaders: Record<string, strin
 function clientKey(request: Request): string {
   const raw = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "anonymous";
   return raw.split(",")[0].trim().slice(0, 64);
+}
+
+function isSameOrigin(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return process.env.NODE_ENV !== "production";
+  try {
+    const requestUrl = new URL(request.url);
+    const originUrl = new URL(origin);
+    return originUrl.origin === requestUrl.origin;
+  } catch {
+    return false;
+  }
 }
 
 function takeRateLimit(key: string): { allowed: boolean; remaining: number; resetsAt: number } {
@@ -73,6 +85,13 @@ function publicMessage(error: unknown): { status: number; message: string } {
 
 export async function POST(request: Request): Promise<Response> {
   const requestId = crypto.randomUUID();
+  if (!isSameOrigin(request)) {
+    return json({ error: "This endpoint only accepts requests from the CALA SIGNAL application." }, 403);
+  }
+  if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) {
+    return json({ error: "Content-Type must be application/json." }, 415);
+  }
+
   const rate = takeRateLimit(clientKey(request));
   const rateHeaders = {
     "X-RateLimit-Limit": String(RATE_LIMIT),
@@ -81,12 +100,11 @@ export async function POST(request: Request): Promise<Response> {
   };
 
   if (!rate.allowed) {
-    return json({ error: "Too many requests. Try again in one minute." }, 429, rateHeaders);
+    return json({ error: "This demo allows two shortlist runs every ten minutes. Please retry later." }, 429, {
+      ...rateHeaders,
+      "Retry-After": String(Math.ceil((rate.resetsAt - Date.now()) / 1_000)),
+    });
   }
-  if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) {
-    return json({ error: "Content-Type must be application/json." }, 415, rateHeaders);
-  }
-
   try {
     const bodyText = await request.text();
     if (new TextEncoder().encode(bodyText).byteLength > MAX_BODY_BYTES) {

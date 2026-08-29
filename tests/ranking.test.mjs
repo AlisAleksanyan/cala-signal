@@ -67,3 +67,38 @@ test("excludes companies with a known out-of-thesis year or funding amount", () 
   assert.equal(companies.find((company) => company.name === "Too Funded AI")?.qualification, "outside_thesis");
   assert.match(companies.find((company) => company.name === "Too Funded AI")?.failed_criteria.join(" ") ?? "", /exceeds the €15M ceiling/);
 });
+
+test("excludes known geography or sector mismatches", () => {
+  const companies = rankCompanies([
+    { company: "Madrid AI", location: "Madrid, Spain", sector: "Artificial intelligence", founded_year: 2022, total_funding: "€8M", source_url: "https://example.com/madrid" },
+    { company: "Barcelona Health", location: "Barcelona", sector: "Health tech", founded_year: 2022, total_funding: "€8M", source_url: "https://example.com/health" },
+  ], [], plan);
+
+  assert.ok(companies.every((company) => company.qualification === "outside_thesis"));
+});
+
+test("parses base-unit currency strings without inflating them into millions", () => {
+  const companies = rankCompanies([
+    { company: "Half Million AI", location: "Barcelona", sector: "Artificial intelligence", founded_year: 2022, total_funding: "€500,000", source_url: "https://example.com/half" },
+    { company: "One Million AI", location: "Barcelona", sector: "Artificial intelligence", founded_year: 2022, total_funding: "€1,000,000", source_url: "https://example.com/one" },
+  ], [], plan);
+
+  assert.equal(companies.find((company) => company.name === "Half Million AI")?.funding_millions, 0.5);
+  assert.equal(companies.find((company) => company.name === "One Million AI")?.funding_millions, 1);
+  assert.ok(companies.every((company) => company.qualification === "verified_match"));
+});
+
+test("does not award freshness credit to a future-dated signal", () => {
+  const [company] = rankCompanies([{
+    company: "Future AI",
+    location: "Barcelona",
+    sector: "Artificial intelligence",
+    founded_year: 2022,
+    total_funding: "€5M",
+    latest_event_date: "2099-01-01",
+    momentum_signal: "Claimed future launch",
+    source_url: "https://example.com/future",
+  }], [], plan);
+
+  assert.equal(company.score_breakdown.evidence_freshness, 0);
+});

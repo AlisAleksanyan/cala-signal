@@ -212,7 +212,7 @@ footer strong { white-space: nowrap; font: 800 10px/1 var(--font-geist-mono), mo
 
 @media (max-width: 960px) {
   .hero-grid { grid-template-columns: 1fr; }
-  .outcome-card { max-width: 430px; }
+  .outcome-card { display: none; }
   .form-footer { flex-wrap: wrap; }
   .preset-row { width: 100%; border-bottom: 1px solid var(--line); }
   .char-count { margin-left: 0; flex: 1; }
@@ -223,8 +223,13 @@ footer strong { white-space: nowrap; font: 800 10px/1 var(--font-geist-mono), mo
 @media (max-width: 720px) {
   .nav-shell > p { display: none; }
   .hero-kicker span:last-child { display: none; }
-  .hero-copy h1 { font-size: clamp(47px, 14vw, 68px); }
+  .hero { padding-top: 26px; padding-bottom: 32px; }
+  .hero-kicker { margin-bottom: 18px; }
+  .hero-copy h1 { font-size: clamp(43px, 13vw, 62px); }
+  .hero-copy > p { margin-top: 18px; font-size: 16px; line-height: 1.42; }
+  .signal-form { margin-top: 26px; }
   .signal-form { box-shadow: 6px 6px 0 var(--ink); }
+  .signal-form textarea { min-height: 112px; }
   .run-button { width: 100%; border-width: 1px 0 0; padding: 0 17px; }
   .preset-row button { font-size: 9px; }
   .loading-status { display: grid; }

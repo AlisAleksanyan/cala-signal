@@ -56,7 +56,7 @@ export function normalizeSafeOrigin(value: unknown): CalaOrigin | null {
 
   try {
     const url = new URL(urlText);
-    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    if (url.protocol !== "https:") return null;
     const label = record
       ? boundedString(record.name ?? record.title ?? record.source, 120)
       : null;

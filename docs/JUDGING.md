@@ -37,7 +37,7 @@ Qualification never depends on the Evidence readiness score. Tests cover the ver
 | `knowledge/query` | Structured fields for company facts and deterministic qualification |
 | `knowledge/search` | Supporting context, explainability, and matching company mentions |
 | Context references | Reconcile an explanation claim with the context that supports it |
-| Safe origins | Link a claim only when a bounded HTTP(S) origin is returned |
+| Safe origins | Link a claim only when a bounded HTTPS origin is returned |
 | Missing/conflicting evidence | Keep unresolved criteria and provider-stated conflicts visible |
 
 Both knowledge requests run in parallel. Context, origins, explainability, references, entities, and provider text are bounded before use. Provider Markdown and HTML are rendered only as escaped text.
@@ -49,7 +49,7 @@ Both knowledge requests run in parallel. Context, origins, explainability, refer
 - JSON-only 4 KB request cap and 24–600-character thesis limit
 - per-client request bucket
 - provider timeout, client abort, sibling cancellation, and listener cleanup
-- HTTP(S)-only URL normalization
+- HTTPS-only URL normalization
 - generic `no-store` API errors with no provider payload leakage
 - restrictive browser security headers
 - focused build/render/API/qualification/evidence/cancellation tests

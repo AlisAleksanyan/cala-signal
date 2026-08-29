@@ -20,9 +20,29 @@
         "agent": "codex"
       },
       "output": "trail"
+    },
+    "launch-readiness": {
+      "task": "Audit CALA SIGNAL as a customer-facing investor sourcing product. Verify that the first screen makes the customer, job, input, output, and reason to trust it immediately clear; hard thesis constraints cannot be promoted when unknown or known to fail; every displayed Cala evidence claim is relevant to the named company and safely linked to its source; provider, repository, security-scan, checkpoint, prompt, token, and development diagnostics remain outside the public product; copy-shortlist and all empty, loading, error, zero-match, and exclusion states are honest and actionable. Also inspect abuse resistance, public response minimization, accessibility, mobile layout, and regression coverage. Report only actionable findings with file and line evidence.",
+      "agents": {
+        "claude-code:sonnet": {
+          "agent": "claude-code",
+          "model": "sonnet",
+          "skills": [
+            "/review"
+          ]
+        },
+        "codex": {
+          "agent": "codex",
+          "prompt": "Review the change according to the profile task. Treat unsupported positive claims as defects."
+        }
+      },
+      "judge": {
+        "agent": "codex"
+      },
+      "output": "trail"
     }
   },
-  "review_default_profile": "hackathon-security",
+  "review_default_profile": "launch-readiness",
   "checkpoints": {
     "primary": {
       "type": "git-refs"

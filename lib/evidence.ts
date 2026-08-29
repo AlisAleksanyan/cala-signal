@@ -33,11 +33,11 @@ function isRelevant(text: string, terms: string[]): boolean {
   return terms.some((term) => normalized.includes(term));
 }
 
-function claimFrom(content: string, contexts: CalaContext[]): EvidenceClaim {
+function claimFrom(content: string, contexts: CalaContext[], fallbackUrl: string | null): EvidenceClaim {
   const origin = contexts.flatMap((context) => context.origins)[0] ?? null;
   return {
-    claim: content.slice(0, 700),
-    source_url: origin?.url ?? null,
+    claim: content.replace(/\s+/g, " ").trim().slice(0, 360),
+    source_url: origin?.url ?? fallbackUrl,
     source_label: origin?.label ?? null,
   };
 }
@@ -66,22 +66,34 @@ export function linkEvidenceToCompanies(
       const referencedContexts = explanation.references
         .map((reference) => contextById.get(reference))
         .filter((context): context is CalaContext => Boolean(context));
-      const referenceText = referencedContexts.map((context) => context.content).join(" ");
-      if (!isRelevant(`${explanation.content} ${referenceText}`, terms)) return [];
-      return [claimFrom(explanation.content, referencedContexts)];
+      if (!isRelevant(explanation.content, terms)) return [];
+      const companyContexts = referencedContexts.filter((context) => isRelevant(context.content, terms));
+      return [claimFrom(explanation.content, companyContexts, company.source_url)];
     });
+    const claims = uniqueClaims(explanationClaims)
+      .filter((claim) => Boolean(claim.source_url))
+      .slice(0, 3);
+    const conflictingFacts = claims.filter((claim) => CONFLICT_PATTERN.test(claim.claim));
+    const evidenceClaims = claims.filter((claim) => !CONFLICT_PATTERN.test(claim.claim));
+    const hasSourceEvidence = Boolean(company.source_url || evidenceClaims.some((claim) => claim.source_url));
+    const missingCriteria = [...company.missing_criteria];
+    let qualification = company.qualification;
 
-    const coveredSourceUrls = new Set(explanationClaims.map((claim) => claim.source_url).filter(Boolean));
-    const contextClaims = contexts
-      .filter((context) => isRelevant(context.content, terms))
-      .filter((context) => !context.origins.some((origin) => coveredSourceUrls.has(origin.url)))
-      .map((context) => claimFrom(context.content, [context]));
-    const claims = uniqueClaims([...explanationClaims, ...contextClaims]).slice(0, 3);
+    if (qualification === "verified_match" && !hasSourceEvidence) {
+      qualification = "needs_verification";
+      missingCriteria.push("Source evidence for the hard criteria is not confirmed");
+    }
+    if (conflictingFacts.length > 0) {
+      qualification = "needs_verification";
+      missingCriteria.push("Conflicting Cala evidence requires review");
+    }
 
     return {
       ...company,
-      evidence_claims: claims.filter((claim) => !CONFLICT_PATTERN.test(claim.claim)),
-      conflicting_facts: claims.filter((claim) => CONFLICT_PATTERN.test(claim.claim)),
+      qualification,
+      missing_criteria: [...new Set(missingCriteria)],
+      evidence_claims: evidenceClaims,
+      conflicting_facts: conflictingFacts,
     };
   });
 }

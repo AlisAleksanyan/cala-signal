@@ -12,11 +12,11 @@
 
 | Boundary | Untrusted input | Control |
 | --- | --- | --- |
-| Browser → `/api/scout` | content type, body size, JSON shape, brief text | JSON-only, 4 KB cap, normalization, length validation, per-client rate bucket |
+| Browser → `/api/scout` | origin, content type, body size, JSON shape, brief text | same-origin POST, JSON-only, 4 KB cap, normalization, length validation, per-client rate bucket |
 | App → OpenAI | investor brief | fixed developer instructions, strict JSON Schema, no storage, timeout |
 | OpenAI → app | structured thesis | independent enum, type, range, count, and length validation |
 | App → Cala | compiled query | generated exclusively from validated allowlisted fields; fixed return-field request |
-| Cala → app | dynamic JSON rows, text, URLs | runtime shape filtering, bounded arrays/strings, HTTP(S)-only URL parser, React text escaping |
+| Cala → app | dynamic JSON rows, text, URLs | runtime shape filtering, bounded arrays/strings, HTTPS-only URL parser, React text escaping |
 | App → browser | shortlist and evidence | same-origin CSP, no-store JSON, generic errors, no upstream payload leakage |
 | Git / Entire | source and checkpoint transcript | `.env*` ignored; never place keys, personal data, or private links in prompts or commits |
 
@@ -33,7 +33,7 @@
 
 ## Known residual risk
 
-- The demo rate limiter is local to a Worker isolate and is not a substitute for a distributed quota service.
+- The demo rejects cross-origin browser calls and allows two requests per client per ten minutes within each Worker isolate. This materially reduces accidental and drive-by credit use, but the bucket is not globally distributed; production beyond the event still requires a centralized quota or Turnstile-backed gate.
 - Cala source data can be incomplete or stale; the UI exposes dates, source references, missing fields, and caveats rather than asserting certainty.
 - CSP permits inline scripts/styles because the framework requires them for the current build. All executable assets remain same-origin.
 - Third-party provider behavior and availability are outside this repository's control.
