@@ -187,6 +187,13 @@ main { min-height: 100vh; overflow: hidden; }
 .criteria-box p, .criteria-box ul { margin: 9px 0 0; font-size: 12px; line-height: 1.5; }
 .criteria-box ul { padding-left: 18px; }
 .criteria-box li + li { margin-top: 5px; }
+.criterion-receipts { margin-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.criterion-receipt { min-width: 0; padding: 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.criterion-receipt strong { display: block; font: 750 8px/1.2 var(--font-geist-mono), monospace; letter-spacing: .07em; text-transform: uppercase; }
+.criterion-receipt a, .criterion-receipt > span { display: block; margin-top: 6px; overflow-wrap: anywhere; color: var(--muted); font: 650 8px/1.35 var(--font-geist-mono), monospace; }
+.criterion-receipt a { color: var(--ink); text-underline-offset: 3px; }
+.receipt-supported { background: #edf6ef; }
+.receipt-conflicting { background: #ffebe5; }
 .claim-list { margin-top: 18px; }
 .evidence-claim { margin-top: 8px; padding: 14px; background: #eef4ff; border-left: 3px solid #8aa8e0; }
 .evidence-claim p { margin: 0; font-size: 12px; line-height: 1.55; }
@@ -218,6 +225,16 @@ footer strong { white-space: nowrap; font: 800 10px/1 var(--font-geist-mono), mo
   .char-count { margin-left: 0; flex: 1; }
   .thesis-panel { grid-template-columns: 1fr; gap: 22px; }
   .company-list { grid-template-columns: 1fr; }
+}
+
+@media (min-width: 961px) and (min-height: 800px) and (max-height: 950px) {
+  .hero { padding-top: 28px; }
+  .hero-kicker { margin-bottom: 20px; }
+  .hero-copy h1 { font-size: clamp(52px, 6vw, 86px); }
+  .hero-copy > p { margin-top: 18px; font-size: 18px; }
+  .signal-form { margin-top: 28px; }
+  .signal-form textarea { min-height: 112px; padding-top: 18px; padding-bottom: 18px; }
+  .workflow-strip { margin-top: 34px; }
 }
 
 @media (max-width: 720px) {

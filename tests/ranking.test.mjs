@@ -13,7 +13,7 @@ const plan = {
   rationale: "Barcelona AI companies with known early-stage funding and recent product momentum.",
 };
 
-test("qualifies a company only when every hard thesis criterion is demonstrably met", () => {
+test("keeps structured matches in verification until Cala corroborates every hard criterion", () => {
   const [company] = rankCompanies([{
     company: "Veridian AI",
     location: "Barcelona, Spain",
@@ -25,7 +25,7 @@ test("qualifies a company only when every hard thesis criterion is demonstrably 
     source_url: "https://example.com/veridian",
   }], [], plan);
 
-  assert.equal(company.qualification, "verified_match");
+  assert.equal(company.qualification, "needs_verification");
   assert.deepEqual(company.missing_criteria, []);
   assert.deepEqual(company.failed_criteria, []);
 });
@@ -44,7 +44,7 @@ test("keeps missing founding year or funding in the verification queue", () => {
   assert.ok(company.missing_criteria.includes("Disclosed funding is not confirmed"));
 });
 
-test("excludes companies with a known out-of-thesis year or funding amount", () => {
+test("records structured failures without excluding until Cala source evidence corroborates them", () => {
   const companies = rankCompanies([
     {
       company: "Too Early AI",
@@ -62,19 +62,19 @@ test("excludes companies with a known out-of-thesis year or funding amount", () 
     },
   ], [], plan);
 
-  assert.equal(companies.find((company) => company.name === "Too Early AI")?.qualification, "outside_thesis");
+  assert.equal(companies.find((company) => company.name === "Too Early AI")?.qualification, "needs_verification");
   assert.match(companies.find((company) => company.name === "Too Early AI")?.failed_criteria.join(" ") ?? "", /before the 2020 threshold/);
-  assert.equal(companies.find((company) => company.name === "Too Funded AI")?.qualification, "outside_thesis");
+  assert.equal(companies.find((company) => company.name === "Too Funded AI")?.qualification, "needs_verification");
   assert.match(companies.find((company) => company.name === "Too Funded AI")?.failed_criteria.join(" ") ?? "", /exceeds the €15M ceiling/);
 });
 
-test("excludes known geography or sector mismatches", () => {
+test("does not exclude geography or sector mismatches before source corroboration", () => {
   const companies = rankCompanies([
     { company: "Madrid AI", location: "Madrid, Spain", sector: "Artificial intelligence", founded_year: 2022, total_funding: "€8M", source_url: "https://example.com/madrid" },
     { company: "Barcelona Health", location: "Barcelona", sector: "Health tech", founded_year: 2022, total_funding: "€8M", source_url: "https://example.com/health" },
   ], [], plan);
 
-  assert.ok(companies.every((company) => company.qualification === "outside_thesis"));
+  assert.ok(companies.every((company) => company.qualification === "needs_verification"));
 });
 
 test("parses base-unit currency strings without inflating them into millions", () => {
@@ -85,7 +85,7 @@ test("parses base-unit currency strings without inflating them into millions", (
 
   assert.equal(companies.find((company) => company.name === "Half Million AI")?.funding_millions, 0.5);
   assert.equal(companies.find((company) => company.name === "One Million AI")?.funding_millions, 1);
-  assert.ok(companies.every((company) => company.qualification === "verified_match"));
+  assert.ok(companies.every((company) => company.qualification === "needs_verification"));
 });
 
 test("does not award freshness credit to a future-dated signal", () => {

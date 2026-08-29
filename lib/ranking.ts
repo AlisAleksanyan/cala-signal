@@ -1,12 +1,14 @@
 import type {
   CalaEntity,
   CandidateQualification,
+  CriterionEvidence,
   Geography,
   RankedCompany,
   ScoreBreakdown,
   Sector,
   ThesisPlan,
 } from "./types";
+import { geographyEvidenceTerms, sectorEvidenceTerms } from "./taxonomy.ts";
 
 const fieldAliases = {
   name: ["company", "name", "company_name", "startup"],
@@ -19,29 +21,6 @@ const fieldAliases = {
   momentum: ["momentum_signal", "recent_signal", "signal", "recent_development", "latest_event"],
   source: ["source_url", "source", "url", "evidence_url"],
 } as const;
-
-const sectorTerms: Record<Sector, readonly string[]> = {
-  "climate tech": ["climate tech", "climatetech", "cleantech", "clean tech", "renewable", "carbon", "energy transition", "sustainability", "solar", "hydrogen"],
-  "artificial intelligence": ["artificial intelligence", "machine learning", "generative ai", "ai"],
-  fintech: ["fintech", "financial technology", "payments", "banking software", "insurtech"],
-  "health tech": ["health tech", "healthtech", "digital health", "medtech", "medical technology"],
-  mobility: ["mobility", "transportation", "automotive", "logistics", "electric vehicle", "ev charging"],
-  "deep tech": ["deep tech", "deeptech", "quantum", "robotics", "advanced materials", "semiconductor", "space tech"],
-  biotech: ["biotech", "biotechnology", "life sciences", "therapeutics", "drug discovery"],
-  "enterprise software": ["enterprise software", "b2b software", "business software", "workflow software", "saas"],
-};
-
-const geographyTerms: Record<Geography, readonly string[]> = {
-  Barcelona: ["barcelona"],
-  Catalonia: ["catalonia", "catalunya", "barcelona", "girona", "tarragona", "lleida"],
-  Spain: ["spain", "espana", "spanish", "barcelona", "madrid", "valencia", "bilbao", "seville", "sevilla", "malaga", "zaragoza"],
-  "Southern Europe": [
-    "southern europe", "spain", "espana", "portugal", "italy", "italia", "greece", "malta", "cyprus", "slovenia", "croatia", "barcelona", "madrid", "lisbon", "lisboa", "porto", "milan", "milano", "rome", "roma", "athens",
-  ],
-  Europe: [
-    "europe", "european", "spain", "portugal", "france", "germany", "italy", "greece", "netherlands", "belgium", "luxembourg", "ireland", "austria", "switzerland", "denmark", "sweden", "norway", "finland", "iceland", "poland", "czechia", "czech republic", "slovakia", "hungary", "romania", "bulgaria", "slovenia", "croatia", "estonia", "latvia", "lithuania", "malta", "cyprus", "united kingdom", "uk", "barcelona", "madrid", "lisbon", "paris", "berlin", "munich", "milan", "rome", "amsterdam", "brussels", "dublin", "vienna", "zurich", "stockholm", "oslo", "helsinki", "warsaw", "prague", "bucharest", "tallinn", "london",
-  ],
-};
 
 function normalizedEntries(row: Record<string, unknown>): Map<string, unknown> {
   return new Map(Object.entries(row).map(([key, value]) => [key.toLowerCase().replace(/[\s-]+/g, "_"), value]));
@@ -119,11 +98,11 @@ function includesTerm(value: string, term: string): boolean {
 }
 
 function matchesSector(value: string | null, sector: Sector): boolean {
-  return Boolean(value && sectorTerms[sector].some((term) => includesTerm(value, term)));
+  return Boolean(value && sectorEvidenceTerms(sector).some((term) => includesTerm(value, term)));
 }
 
 function matchesGeography(value: string | null, geography: Geography): boolean {
-  return Boolean(value && geographyTerms[geography].some((term) => includesTerm(value, term)));
+  return Boolean(value && geographyEvidenceTerms(geography).some((term) => includesTerm(value, term)));
 }
 
 function freshnessPoints(date: string | null): number {
@@ -142,7 +121,7 @@ function qualificationFor(
   sector: string | null,
   foundedYear: number | null,
   funding: number | null,
-): { qualification: CandidateQualification; missingCriteria: string[]; failedCriteria: string[]; geographyMatch: boolean; sectorMatch: boolean } {
+): { qualification: CandidateQualification; missingCriteria: string[]; failedCriteria: string[]; geographyMatch: boolean; sectorMatch: boolean; criterionEvidence: CriterionEvidence[] } {
   const missingCriteria: string[] = [];
   const failedCriteria: string[] = [];
   const geographyMatch = matchesGeography(location, plan.geography);
@@ -160,20 +139,58 @@ function qualificationFor(
   if (!sector) missingCriteria.push("Sector is not confirmed");
   else if (!sectorMatch) failedCriteria.push(`Sector fit for ${plan.sector} is not demonstrated`);
 
-  const outsideThesis = failedCriteria.length > 0;
-  const verified = foundedYear !== null
-    && foundedYear >= plan.founded_after
-    && funding !== null
-    && funding <= plan.max_funding_millions
-    && geographyMatch
-    && sectorMatch;
+  const criterionEvidence: CriterionEvidence[] = [
+    {
+      criterion: "founding_year",
+      label: "Founding year",
+      expected_value: foundedYear,
+      outcome: foundedYear === null ? "unknown" : foundedYear >= plan.founded_after ? "matches" : "fails",
+      status: "unsupported",
+      claim: null,
+      source_url: null,
+      source_label: null,
+    },
+    {
+      criterion: "funding",
+      label: "Funding",
+      expected_value: funding,
+      outcome: funding === null ? "unknown" : funding <= plan.max_funding_millions ? "matches" : "fails",
+      status: "unsupported",
+      claim: null,
+      source_url: null,
+      source_label: null,
+    },
+    {
+      criterion: "geography",
+      label: "Geography",
+      expected_value: plan.geography,
+      outcome: location === null ? "unknown" : geographyMatch ? "matches" : "fails",
+      status: "unsupported",
+      claim: null,
+      source_url: null,
+      source_label: null,
+    },
+    {
+      criterion: "sector",
+      label: "Sector",
+      expected_value: plan.sector,
+      outcome: sector === null ? "unknown" : sectorMatch ? "matches" : "fails",
+      status: "unsupported",
+      claim: null,
+      source_url: null,
+      source_label: null,
+    },
+  ];
 
   return {
-    qualification: outsideThesis ? "outside_thesis" : verified ? "verified_match" : "needs_verification",
+    // Structured rows identify candidate facts, but Cala context with a safe
+    // origin must corroborate each hard criterion before qualification.
+    qualification: "needs_verification",
     missingCriteria,
     failedCriteria,
     geographyMatch,
     sectorMatch,
+    criterionEvidence,
   };
 }
 
@@ -244,6 +261,7 @@ export function rankCompanies(
       qualification: qualification.qualification,
       missing_criteria: qualification.missingCriteria,
       failed_criteria: qualification.failedCriteria,
+      criterion_evidence: qualification.criterionEvidence,
       evidence_claims: [],
       conflicting_facts: [],
     });

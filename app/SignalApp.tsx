@@ -91,6 +91,21 @@ function CompanyCard({ company }: { company: RankedCompany }) {
         )}
       </div>
 
+      <div className="criterion-receipts" aria-label="Hard criterion source receipts">
+        {company.criterion_evidence.map((criterion) => (
+          <div key={criterion.criterion} className={`criterion-receipt receipt-${criterion.status}`}>
+            <strong>{criterion.label}</strong>
+            {criterion.status === "supported" && criterion.source_url ? (
+              <a href={criterion.source_url} target="_blank" rel="noreferrer" title={criterion.claim ?? undefined}>
+                Source · {sourceHost(criterion.source_url)} <span aria-hidden="true">↗</span>
+              </a>
+            ) : (
+              <span>{criterion.status === "conflicting" ? "Conflicting source" : "Source needed"}</span>
+            )}
+          </div>
+        ))}
+      </div>
+
       {(company.evidence_claims.length > 0 || company.conflicting_facts.length > 0) && (
         <div className="claim-list">
           <p className="section-label">Cala evidence claims</p>
@@ -154,6 +169,7 @@ function buildShortlistMemo(result: ScoutResponse): string {
         company.source_url,
         ...company.evidence_claims.map((claim) => claim.source_url),
         ...company.conflicting_facts.map((claim) => claim.source_url),
+        ...company.criterion_evidence.map((criterion) => criterion.source_url),
       ].filter((url): url is string => Boolean(url)))];
       if (sources.length) lines.push(`  Sources: ${sources.join(", ")}`);
     }
@@ -168,7 +184,7 @@ function ResultGroup({ qualification, companies }: { qualification: CandidateQua
   const descriptions: Record<CandidateQualification, string> = {
     verified_match: "All hard criteria are known and demonstrably match the thesis.",
     needs_verification: "Potentially relevant companies with at least one hard criterion still unknown or unproven.",
-    outside_thesis: "Known founding year or disclosed funding falls outside the thesis boundary.",
+    outside_thesis: "At least one source-confirmed hard fact falls outside the thesis boundary.",
   };
 
   return (
@@ -198,9 +214,9 @@ function Results({ result }: { result: ScoutResponse }) {
     outside_thesis: result.companies.filter((company) => company.qualification === "outside_thesis"),
   }), [result.companies]);
   const evidenceReceiptCount = useMemo(() => new Set(result.companies.flatMap((company) => [
-    company.source_url,
     ...company.evidence_claims.map((claim) => claim.source_url),
     ...company.conflicting_facts.map((claim) => claim.source_url),
+    ...company.criterion_evidence.map((criterion) => criterion.source_url),
   ].filter((url): url is string => Boolean(url)))).size, [result.companies]);
 
   async function copyShortlist() {
@@ -279,9 +295,18 @@ export function SignalApp() {
     setLoading(true);
     setError(null);
     try {
+      const tokenResponse = await fetch("/api/scout-token", {
+        method: "GET",
+        cache: "no-store",
+        headers: { "Accept": "application/json" },
+      });
+      const tokenPayload = await tokenResponse.json() as { token?: string; error?: string };
+      if (!tokenResponse.ok || !tokenPayload.token) {
+        throw new Error(tokenPayload.error || "Shortlist protection is unavailable.");
+      }
       const response = await fetch("/api/scout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Scout-Token": tokenPayload.token },
         body: JSON.stringify({ brief }),
       });
       const payload = await response.json() as ScoutResponse & { error?: string };

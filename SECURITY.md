@@ -12,7 +12,8 @@
 
 | Boundary | Untrusted input | Control |
 | --- | --- | --- |
-| Browser → `/api/scout` | origin, content type, body size, JSON shape, brief text | same-origin POST, JSON-only, 4 KB cap, normalization, length validation, per-client rate bucket |
+| Browser → `/api/scout-token` | origin and client identity | no-store response, trusted `cf-connecting-ip`, short-lived HMAC-signed token bound to a hashed client key |
+| Browser → `/api/scout` | token, origin, content type, body size, JSON shape, brief text | valid IP-bound token, same-origin POST, JSON-only, 4 KB cap, normalization, length validation, atomic D1 quota |
 | App → OpenAI | investor brief | fixed developer instructions, strict JSON Schema, no storage, timeout |
 | OpenAI → app | structured thesis | independent enum, type, range, count, and length validation |
 | App → Cala | compiled query | generated exclusively from validated allowlisted fields; fixed return-field request |
@@ -23,6 +24,8 @@
 ## Abuse cases explicitly handled
 
 - Oversized, non-JSON, malformed, or too-short requests
+- missing, invalid, expired, or differently IP-bound scout tokens
+- concurrent provider-credit requests beyond two runs per hashed client per fixed ten-minute window
 - Prompt text attempting to create arbitrary Cala syntax
 - Out-of-range model values or unsupported enums
 - Cala rows with alternate field names, missing fields, duplicate companies, unsafe URLs, or extreme values
@@ -33,7 +36,9 @@
 
 ## Known residual risk
 
-- The demo rejects cross-origin browser calls and allows two requests per client per ten minutes within each Worker isolate. This materially reduces accidental and drive-by credit use, but the bucket is not globally distributed; production beyond the event still requires a centralized quota or Turnstile-backed gate.
+- Provider access fails closed if D1, `SCOUT_TOKEN_SECRET`, or the trusted Cloudflare client-IP header is unavailable. D1 enforces the quota globally for the deployment with an atomic upsert. Origin checks remain defense in depth and are not treated as authentication.
+- The fixed ten-minute D1 windows can allow two requests near the end of one window and two more at the start of the next. A rolling window or Turnstile is an optional stricter control after the event.
+- Quota rows are not yet pruned automatically; add a scheduled retention cleanup if the public demo remains online long term.
 - Cala source data can be incomplete or stale; the UI exposes dates, source references, missing fields, and caveats rather than asserting certainty.
 - CSP permits inline scripts/styles because the framework requires them for the current build. All executable assets remain same-origin.
 - Third-party provider behavior and availability are outside this repository's control.

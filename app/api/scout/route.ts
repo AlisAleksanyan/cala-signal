@@ -2,6 +2,8 @@ import { queryCala } from "@/lib/cala";
 import { linkEvidenceToCompanies } from "@/lib/evidence";
 import { planThesis } from "@/lib/openai-planner";
 import { rankCompanies } from "@/lib/ranking";
+import { getServerBindings } from "@/lib/runtime-env";
+import { hashClientKey, RATE_LIMIT, takeD1Quota, trustedClientIp, verifyScoutToken } from "@/lib/scout-security";
 import type { ScoutResponse } from "@/lib/types";
 import { compileCalaQuery, extractExplicitFoundingYear, validateBrief } from "@/lib/validation";
 
@@ -9,9 +11,6 @@ export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 4_096;
-const RATE_WINDOW_MS = 10 * 60_000;
-const RATE_LIMIT = 2;
-const rateBuckets = new Map<string, { count: number; resetsAt: number }>();
 
 const responseHeaders = {
   "Cache-Control": "no-store",
@@ -27,46 +26,14 @@ function json(payload: unknown, status = 200, extraHeaders: Record<string, strin
   });
 }
 
-function clientKey(request: Request): string {
-  const raw = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "anonymous";
-  return raw.split(",")[0].trim().slice(0, 64);
-}
-
 function isSameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
   if (!origin) return process.env.NODE_ENV !== "production";
   try {
-    const requestUrl = new URL(request.url);
-    const originUrl = new URL(origin);
-    return originUrl.origin === requestUrl.origin;
+    return new URL(origin).origin === new URL(request.url).origin;
   } catch {
     return false;
   }
-}
-
-function takeRateLimit(key: string): { allowed: boolean; remaining: number; resetsAt: number } {
-  const now = Date.now();
-  const current = rateBuckets.get(key);
-  if (!current || current.resetsAt <= now) {
-    const bucket = { count: 1, resetsAt: now + RATE_WINDOW_MS };
-    rateBuckets.set(key, bucket);
-    return { allowed: true, remaining: RATE_LIMIT - 1, resetsAt: bucket.resetsAt };
-  }
-  current.count += 1;
-  if (rateBuckets.size > 2_000) {
-    for (const [bucketKey, bucket] of rateBuckets) {
-      if (bucket.resetsAt <= now) rateBuckets.delete(bucketKey);
-    }
-    if (rateBuckets.size > 2_000) {
-      const oldestKey = rateBuckets.keys().next().value as string | undefined;
-      if (oldestKey) rateBuckets.delete(oldestKey);
-    }
-  }
-  return {
-    allowed: current.count <= RATE_LIMIT,
-    remaining: Math.max(0, RATE_LIMIT - current.count),
-    resetsAt: current.resetsAt,
-  };
 }
 
 function publicMessage(error: unknown): { status: number; message: string } {
@@ -88,40 +55,52 @@ export async function POST(request: Request): Promise<Response> {
   if (!isSameOrigin(request)) {
     return json({ error: "This endpoint only accepts requests from the CALA SIGNAL application." }, 403);
   }
+
   if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) {
     return json({ error: "Content-Type must be application/json." }, 415);
   }
 
-  const rate = takeRateLimit(clientKey(request));
-  const rateHeaders = {
-    "X-RateLimit-Limit": String(RATE_LIMIT),
-    "X-RateLimit-Remaining": String(rate.remaining),
-    "X-RateLimit-Reset": String(Math.ceil(rate.resetsAt / 1_000)),
-  };
-
-  if (!rate.allowed) {
-    return json({ error: "This demo allows two shortlist runs every ten minutes. Please retry later." }, 429, {
-      ...rateHeaders,
-      "Retry-After": String(Math.ceil((rate.resetsAt - Date.now()) / 1_000)),
-    });
-  }
   try {
     const bodyText = await request.text();
     if (new TextEncoder().encode(bodyText).byteLength > MAX_BODY_BYTES) {
-      return json({ error: "Request body is too large." }, 413, rateHeaders);
+      return json({ error: "Request body is too large." }, 413);
     }
 
     let raw: unknown;
     try {
       raw = JSON.parse(bodyText);
     } catch {
-      return json({ error: "Request body is not valid JSON." }, 400, rateHeaders);
+      return json({ error: "Request body is not valid JSON." }, 400);
     }
 
     const brief = validateBrief((raw as { brief?: unknown })?.brief);
+    const bindings = getServerBindings();
+    const secret = bindings.SCOUT_TOKEN_SECRET || process.env.SCOUT_TOKEN_SECRET;
+    const ip = trustedClientIp(request);
+    if (!bindings.DB || !secret || !ip) {
+      return json({ error: "Shortlist protection is unavailable." }, 503);
+    }
+    const clientKey = await hashClientKey(ip);
+    if (!await verifyScoutToken(request.headers.get("x-scout-token"), clientKey, secret)) {
+      return json({ error: "A fresh shortlist token is required." }, 403);
+    }
     if (!process.env.OPENAI_API_KEY || !process.env.CALA_API_KEY) {
       throw new Error("Live providers are not configured.");
     }
+
+    const rate = await takeD1Quota(bindings.DB, clientKey);
+    const rateHeaders = {
+      "X-RateLimit-Limit": String(RATE_LIMIT),
+      "X-RateLimit-Remaining": String(rate.remaining),
+      "X-RateLimit-Reset": String(Math.ceil(rate.resetsAt / 1_000)),
+    };
+    if (!rate.allowed) {
+      return json({ error: "This demo allows two shortlist runs every ten minutes. Please retry later." }, 429, {
+        ...rateHeaders,
+        "Retry-After": String(Math.max(1, Math.ceil((rate.resetsAt - Date.now()) / 1_000))),
+      });
+    }
+
     const plannedThesis = await planThesis(brief, request.signal);
     const explicitFoundingYear = extractExplicitFoundingYear(brief);
     const thesis = explicitFoundingYear === null
@@ -144,17 +123,8 @@ export async function POST(request: Request): Promise<Response> {
     if (companies.some((company) => company.qualification === "needs_verification")) {
       caveats.push("Candidates with unknown or unproven hard criteria remain in the verification queue.");
     }
-    if (companies.some((company) => company.evidence_claims.length > 0)
-      && !companies.some((company) => company.evidence_claims.some((claim) => claim.source_url))) {
-      caveats.push("Cala returned evidence claims without source origins for this result; verify those claims independently.");
-    }
 
-    const result: ScoutResponse = {
-      thesis,
-      companies,
-      caveats,
-    };
-
+    const result: ScoutResponse = { thesis, companies, caveats };
     return json(result, 200, rateHeaders);
   } catch (error) {
     const safe = publicMessage(error);
@@ -164,6 +134,6 @@ export async function POST(request: Request): Promise<Response> {
         error: error instanceof Error ? error.message : "unknown",
       });
     }
-    return json({ error: safe.message }, safe.status, rateHeaders);
+    return json({ error: safe.message }, safe.status);
   }
 }

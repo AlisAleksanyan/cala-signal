@@ -84,8 +84,23 @@ export interface ScoreBreakdown {
 
 export type CandidateQualification = "verified_match" | "needs_verification" | "outside_thesis";
 
+export type HardCriterion = "founding_year" | "funding" | "geography" | "sector";
+export type CriterionOutcome = "matches" | "fails" | "unknown";
+export type CriterionEvidenceStatus = "supported" | "unsupported" | "conflicting";
+
 export interface EvidenceClaim {
   claim: string;
+  source_url: string | null;
+  source_label: string | null;
+}
+
+export interface CriterionEvidence {
+  criterion: HardCriterion;
+  label: string;
+  expected_value: string | number | null;
+  outcome: CriterionOutcome;
+  status: CriterionEvidenceStatus;
+  claim: string | null;
   source_url: string | null;
   source_label: string | null;
 }
@@ -107,6 +122,7 @@ export interface RankedCompany {
   qualification: CandidateQualification;
   missing_criteria: string[];
   failed_criteria: string[];
+  criterion_evidence: CriterionEvidence[];
   evidence_claims: EvidenceClaim[];
   conflicting_facts: EvidenceClaim[];
 }
