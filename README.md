@@ -1,5 +1,7 @@
 # CALA SIGNAL
 
+[**Open the live product →**](https://cala-signal.hovohovhannisyan.chatgpt.site/)
+
 **Source-backed startup sourcing for early-stage investors, accelerators, and corporate venture teams.** Describe one investment thesis in plain English; CALA SIGNAL returns qualified leads, a verification queue, and known exclusions with the evidence needed to review each decision.
 
 ## Customer problem
