@@ -4,6 +4,7 @@ import test from "node:test";
 const securityHeaders = [
   "content-security-policy",
   "referrer-policy",
+  "strict-transport-security",
   "x-content-type-options",
   "x-frame-options",
 ];
@@ -47,6 +48,7 @@ test("ships browser security headers", async () => {
   const response = await render();
   for (const header of securityHeaders) assert.ok(response.headers.get(header), `missing ${header}`);
   assert.match(response.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+  assert.match(response.headers.get("strict-transport-security") ?? "", /max-age=31536000/);
 });
 
 test("rejects malformed scout requests before provider calls", async () => {

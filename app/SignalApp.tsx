@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { RankedCompany, ScoutResponse } from "@/lib/types";
 
 const EXAMPLES = [
-  "Find climate-tech startups in Spain founded since 2019, under €25M funding, with recent partnerships or grants.",
+  "Find European enterprise software startups founded since 2020 with credible recent partnerships, grants, or product launches that signal operational momentum.",
   "Scout Barcelona AI startups founded after 2020, below €15M raised, showing hiring or product momentum.",
   "Find Southern European mobility startups since 2018, under €30M funding, with recent commercial partnerships.",
 ];
@@ -87,7 +87,7 @@ function Results({ result }: { result: ScoutResponse }) {
     <section className="results" aria-live="polite">
       <div className="result-head">
         <div>
-          <p className="eyebrow">Signal report · {result.companies.length} candidates</p>
+          <p className="eyebrow">Signal report · {result.companies.length} {result.companies.length === 1 ? "candidate" : "candidates"}</p>
           <h2>The opportunity skyline</h2>
         </div>
         <div className="timing-chip">{(result.timings_ms.total / 1000).toFixed(1)}s end to end</div>

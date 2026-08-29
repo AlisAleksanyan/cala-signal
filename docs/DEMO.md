@@ -12,7 +12,7 @@ Open CALA SIGNAL. Point to **Evidence-first startup scouting** and the visible 1
 
 Use the prepared brief:
 
-> “Find climate-tech startups in Spain founded since 2019, under €25M funding, with recent partnerships or grants.”
+> “Find European enterprise software startups founded since 2020 with credible recent partnerships, grants, or product launches that signal operational momentum.”
 
 Click **Run live scout**.
 

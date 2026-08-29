@@ -92,7 +92,7 @@ npm audit --audit-level=low
 
 ```json
 {
-  "brief": "Find climate-tech startups in Spain founded since 2019, under EUR 25M funding, with recent partnerships or grants."
+  "brief": "Find European enterprise software startups founded since 2020 with credible recent partnerships, grants, or product launches that signal operational momentum."
 }
 ```
 
@@ -115,7 +115,7 @@ The response contains the validated thesis, compiled Cala query, ranked companie
 
 ## Demo path (under two minutes)
 
-1. Paste the climate-tech example and run the live scout.
+1. Run the prepared European enterprise-software brief.
 2. Show the strict plan and expand the compiled Cala query.
 3. Read the top skyline score; open its five-part breakdown.
 4. Show a Cala entity/KnowBit and a deliberately missing field scoring zero.
