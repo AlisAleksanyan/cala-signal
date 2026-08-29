@@ -2,7 +2,7 @@ import { queryCala } from "@/lib/cala";
 import { planThesis } from "@/lib/openai-planner";
 import { rankCompanies } from "@/lib/ranking";
 import type { ScoutResponse } from "@/lib/types";
-import { compileCalaQuery, validateBrief } from "@/lib/validation";
+import { compileCalaQuery, extractExplicitFoundingYear, validateBrief } from "@/lib/validation";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -105,7 +105,11 @@ export async function POST(request: Request): Promise<Response> {
       throw new Error("Live providers are not configured.");
     }
     const planningStarted = Date.now();
-    const thesis = await planThesis(brief, request.signal);
+    const plannedThesis = await planThesis(brief, request.signal);
+    const explicitFoundingYear = extractExplicitFoundingYear(brief);
+    const thesis = explicitFoundingYear === null
+      ? plannedThesis
+      : { ...plannedThesis, founded_after: explicitFoundingYear };
     if (request.signal.aborted) throw request.signal.reason;
     const planningMs = Date.now() - planningStarted;
     const calaQuery = compileCalaQuery(thesis);

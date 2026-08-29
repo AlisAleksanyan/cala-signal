@@ -10,6 +10,8 @@ import {
 
 const MIN_BRIEF_LENGTH = 24;
 const MAX_BRIEF_LENGTH = 600;
+const MIN_FOUNDING_YEAR = 2000;
+const MAX_FOUNDING_YEAR = 2026;
 
 export function validateBrief(value: unknown): string {
   if (typeof value !== "string") {
@@ -26,6 +28,14 @@ export function validateBrief(value: unknown): string {
   return brief;
 }
 
+export function extractExplicitFoundingYear(brief: string): number | null {
+  const match = /\bfounded\s+(?:since|after|from)\s+(\d{4})\b/i.exec(brief);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  return year >= MIN_FOUNDING_YEAR && year <= MAX_FOUNDING_YEAR ? year : null;
+}
+
 function isOneOf<T extends readonly string[]>(value: unknown, values: T): value is T[number] {
   return typeof value === "string" && (values as readonly string[]).includes(value);
 }
@@ -38,7 +48,7 @@ export function validateThesisPlan(value: unknown): ThesisPlan {
   const plan = value as Record<string, unknown>;
   if (!isOneOf(plan.sector, SECTORS)) throw new Error("Unsupported sector.");
   if (!isOneOf(plan.geography, GEOGRAPHIES)) throw new Error("Unsupported geography.");
-  if (!Number.isInteger(plan.founded_after) || Number(plan.founded_after) < 2000 || Number(plan.founded_after) > 2026) {
+  if (!Number.isInteger(plan.founded_after) || Number(plan.founded_after) < MIN_FOUNDING_YEAR || Number(plan.founded_after) > MAX_FOUNDING_YEAR) {
     throw new Error("Invalid founding-year filter.");
   }
   if (typeof plan.max_funding_millions !== "number" || !Number.isFinite(plan.max_funding_millions) || plan.max_funding_millions < 0.5 || plan.max_funding_millions > 250) {
