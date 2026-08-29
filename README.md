@@ -74,7 +74,7 @@ The full deterministic breakdown stays behind a disclosure on each company card.
 - Provider calls preserve client cancellation, timeout cancellation, sibling cancellation, and listener cleanup.
 - API responses are `no-store`; upstream payloads, compiled provider input, provider narratives, internal identifiers, and timing data are not returned to the customer workspace.
 - Browser responses keep the same-origin Content Security Policy, frame protection, restrictive Permissions Policy, HSTS, and `nosniff`.
-- Cross-origin browser requests are rejected, and the in-memory rate bucket limits a client to two requests per ten minutes per Worker isolate.
+- Cross-origin browser requests are rejected, a short-lived signed token is bound to the trusted client IP, and an atomic D1 quota limits a client to two requests per ten minutes across the deployment.
 - External links accept only HTTPS, with bounded URLs, labels, claims, references, and arrays.
 
 See [SECURITY.md](./SECURITY.md) for the complete trust model.
@@ -141,5 +141,5 @@ Repository-development evidence is deliberately separated from the customer expe
 - Qualification is bounded by the structured fields and sources Cala returns for a given thesis.
 - Geography and sector matching use conservative, deterministic term sets and may place a valid company in verification when wording is unusual.
 - Currency conversion is not attempted; the query requests EUR and the parser treats normalized returned amounts as EUR millions.
-- The rate limiter is local to a Worker isolate, not a distributed quota service.
+- The quota depends on Cloudflare D1 and the trusted client-IP header; provider access fails closed when either protection is unavailable.
 - A shortlist is a starting point for human due diligence, not a recommendation to invest.

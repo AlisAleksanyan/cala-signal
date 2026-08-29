@@ -19,5 +19,5 @@ Can CALA SIGNAL safely promote a company to `verified_match` when Cala returns d
 - Trace each invariant from provider normalization through ranking, evidence linking, API minimization, and UI rendering.
 - Construct adversarial examples for alias collisions, geography and sector mismatches, missing values, conflicts, funding formats, future dates, unsafe URLs, and multi-company source context.
 - Identify any path that can create a false verified match, misattribute a source, overcount evidence receipts, or leak provider/development material.
-- Distinguish confirmed defects from residual operational risks such as isolate-local rate limiting.
+- Distinguish confirmed defects from residual operational risks such as quota exhaustion, unavailable D1 bindings, or missing trusted client-IP metadata.
 - Finish with a compact go/no-go verdict and file/line evidence for every actionable finding.
